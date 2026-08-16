@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SmaTrips AI — مساعد المسافر الذكي</title>
+  <meta name="description" content="SmaTrips AI هو مساعدك الذكي قبل السفر وأثناء الرحلة: بيانات الرحلة، الجدول اليومي، المهام، الأغراض، الأماكن والخرائط، الطقس، تحويل العملات، والمزيد في مكان واحد." />
+  <meta name="theme-color" content="#8B5CF6" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%238B5CF6%22/><path d=%22M12 3l7.5 17-7.5-4-7.5 4z%22 fill=%22white%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <div class="app-shell">
+    <!-- الشريط الجانبي (سطح المكتب) -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          <img src="assets/logo/logo-mark.png" alt="SmaTrips AI" class="brand-logo-img" />
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">SmaTrips AI</span>
+          <span class="brand-sub">مساعد المسافر الذكي</span>
+        </div>
+      </div>
+
+      <button class="search-bar-btn" id="search-open-btn-desktop" type="button">
+        <span style="display:flex;align-items:center;gap:8px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>
+          بحث سريع…
+        </span>
+        <span class="hint" style="margin-inline-start:auto;font-size:11px;opacity:.7;">Ctrl K</span>
+      </button>
+
+      <div>
+        <div class="nav-group-label">الأقسام</div>
+        <nav class="nav-list" id="sidebar-nav"></nav>
+      </div>
+    </aside>
+
+    <!-- العمود الرئيسي -->
+    <div class="content-col">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menu-open-btn" type="button" aria-label="القائمة"></button>
+        <div class="topbar-title" id="topbar-title">SmaTrips AI</div>
+        <button class="icon-btn" id="search-open-btn" type="button" aria-label="بحث"></button>
+      </header>
+
+      <main class="main" id="app-main"></main>
+
+      <nav class="bottom-nav" id="bottom-nav"></nav>
+    </div>
+  </div>
+
+  <!-- شيت التنقل للجوال -->
+  <div class="nav-sheet-overlay" id="nav-sheet-overlay">
+    <div class="nav-sheet">
+      <div class="flex items-center justify-between mt-1" style="margin-bottom:16px;">
+        <div class="brand" style="padding:0;">
+          <div class="brand-mark">
+            <img src="assets/logo/logo-mark.png" alt="SmaTrips AI" class="brand-logo-img" style="height:28px;" />
+          </div>
+          <span class="brand-title">القائمة</span>
+        </div>
+        <button class="icon-btn" id="nav-sheet-close-btn" type="button" aria-label="إغلاق"></button>
+      </div>
+      <nav class="nav-list" id="nav-sheet-list"></nav>
+    </div>
+  </div>
+
+  <!-- نافذة البحث السريع -->
+  <div class="overlay" id="search-overlay">
+    <div class="search-panel">
+      <div class="search-input-row">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;flex-shrink:0;"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>
+        <input id="search-input" type="text" placeholder="ابحث عن مكان، مهمة، يوم، رابط…" autocomplete="off" />
+        <button class="icon-btn" id="search-close-btn" type="button" aria-label="إغلاق" style="width:32px;height:32px;"></button>
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+  </div>
+
+  <div id="toast-host"></div>
+
+  <!-- الأدوات الأساسية -->
+  <script src="js/icons.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/router.js"></script>
+
+  <!-- الصفحات -->
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/trip.js"></script>
+  <script src="js/pages/itinerary.js"></script>
+  <script src="js/pages/tasks.js"></script>
+  <script src="js/pages/packing.js"></script>
+  <script src="js/pages/places.js"></script>
+  <script src="js/pages/weather.js"></script>
+  <script src="js/pages/currency.js"></script>
+  <script src="js/pages/plugs.js"></script>
+  <script src="js/pages/links.js"></script>
+  <script src="js/pages/services.js"></script>
+  <script src="js/pages/notfound.js"></script>
+
+  <!-- الإقلاع -->
+  <script src="js/app.js"></script>
+</body>
+</html>
