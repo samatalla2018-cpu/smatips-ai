@@ -462,6 +462,108 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .search-result-title { font-weight: 700; font-size: 13.5px; }
 .search-result-sub { font-size: 11.5px; color: var(--text-muted); }
 
+/* -------- نافذة الإضافة/التعديل -------- */
+.modal-panel { max-height: 88vh; }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px; border-bottom: 1px solid var(--border);
+}
+.modal-header h3 { font-size: 16px; }
+.modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+/* -------- بطاقات قوائم العناصر (مهام/أغراض/أماكن...) -------- */
+.item-card {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface);
+}
+.item-card + .item-card { margin-top: 8px; }
+.item-check {
+  width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; margin-top: 1px; background: var(--surface);
+}
+.item-check.checked { background: var(--primary); border-color: var(--primary); }
+.item-title { font-weight: 700; font-size: 14px; }
+.item-title.done { text-decoration: line-through; color: var(--text-faint); }
+.item-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.item-actions { display: flex; gap: 4px; margin-inline-start: auto; flex-shrink: 0; }
+
+.map-embed-wrap {
+  margin-top: 10px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  aspect-ratio: 16 / 9;
+}
+.map-embed-wrap iframe { width: 100%; height: 100%; border: none; display: block; }
+
+/* -------- بطاقة الطقس -------- */
+.weather-hero { padding: 20px; }
+.weather-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.weather-city { font-size: 20px; font-weight: 800; }
+.weather-icon-lg { flex-shrink: 0; }
+.weather-temp-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.weather-temp-big { font-size: 44px; font-weight: 800; line-height: 1; }
+.weather-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 18px; }
+.weather-stat {
+  background: var(--surface-2); border-radius: var(--radius-sm);
+  padding: 10px 6px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: var(--text-muted);
+}
+.weather-stat span { font-size: 10.5px; font-weight: 700; }
+.weather-stat b { font-size: 14.5px; color: var(--text); font-weight: 800; }
+@media (max-width: 560px) {
+  .weather-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .weather-temp-big { font-size: 36px; }
+}
+
+/* -------- المساعد الذكي -------- */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 4px;
+}
+.chat-bubble {
+  max-width: 82%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-bubble.user { margin-inline-end: auto; background: var(--primary); color: #fff; }
+.chat-bubble.assistant { margin-inline-start: auto; background: var(--surface-2); color: var(--text); }
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+.chat-input-row textarea {
+  flex: 1;
+  resize: none;
+  min-height: 44px;
+  max-height: 120px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 11px 14px;
+  font-size: 14.5px;
+  font-family: inherit;
+  outline: none;
+}
+.chat-input-row textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+
 /* -------- شيت التنقل للجوال -------- */
 .nav-sheet-overlay {
   position: fixed; inset: 0; background: rgba(10,14,22,.5); z-index: 90;

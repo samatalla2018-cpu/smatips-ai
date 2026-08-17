@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: 'plugs', path: '/plugs', title: 'المقابس الكهربائية', icon: 'plug', short: 'المقابس', color: 'accent', desc: 'نوع المقبس والفولتية في بلد الوجهة' },
   { id: 'links', path: '/links', title: 'روابط مفيدة وحجوزات', icon: 'link', short: 'الروابط', color: 'primary', desc: 'تذاكر، حجوزات، تأشيرة وتأمين السفر' },
   { id: 'services', path: '/services', title: 'خدمات موصى بها', icon: 'star', short: 'الخدمات', color: 'accent', desc: 'خدمات مقترحة لتسهيل رحلتك' },
+  { id: 'assistant', path: '/assistant', title: 'المساعد الذكي', icon: 'sparkle', short: 'المساعد', color: 'primary', desc: 'اسأل عن أي شيء يخص رحلتك' },
 ];
 
 const BOTTOM_NAV_IDS = ['dashboard', 'itinerary', 'tasks', 'places', 'more'];

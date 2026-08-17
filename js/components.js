@@ -24,14 +24,5 @@ function emptyState({ iconName = 'info', title, desc, actionLabel, actionAttrs =
     </div>`;
 }
 
-function comingSoonNote(text) {
-  return `
-    <div class="card flex items-center gap-2" style="border-style:dashed; margin-top:14px;">
-      <div class="page-header-icon" style="width:34px;height:34px;border-radius:10px;">${icon('sparkle', 16)}</div>
-      <div class="text-sm text-muted" style="font-weight:700;">${escapeHtml(text)}</div>
-    </div>`;
-}
-
 window.pageHeader = pageHeader;
 window.emptyState = emptyState;
-window.comingSoonNote = comingSoonNote;

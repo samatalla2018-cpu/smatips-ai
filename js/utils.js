@@ -81,6 +81,50 @@ function toast(msg, type = 'info') {
   }, 2600);
 }
 
+// جلب إحداثيات مدينة عبر Nominatim/OpenStreetMap (مجاني، بدون مفتاح، يدعم البحث بالعربية) مع تخزين مؤقت
+const _geocodeCache = {};
+async function geocodeCity(query) {
+  if (!query) return null;
+  const key = query.trim().toLowerCase();
+  if (key in _geocodeCache) return _geocodeCache[key];
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=ar`);
+    if (!res.ok) throw new Error('geocoding request failed');
+    const data = await res.json();
+    const first = data[0];
+    let result = null;
+    if (first) {
+      const parts = first.display_name.split(',').map((s) => s.trim());
+      result = { lat: Number(first.lat), lon: Number(first.lon), name: parts[0], country: parts[parts.length - 1] };
+    }
+    _geocodeCache[key] = result;
+    return result;
+  } catch (e) {
+    console.error('تعذّر تحديد إحداثيات المدينة', e);
+    _geocodeCache[key] = null;
+    return null;
+  }
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('geolocation not supported')); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (err) => reject(err),
+      { timeout: 10000 }
+    );
+  });
+}
+
 function money(n) {
   if (n === null || n === undefined || n === '') return '';
   const num = Number(n);

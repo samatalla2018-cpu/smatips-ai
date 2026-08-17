@@ -26,6 +26,7 @@ function defaultData() {
     services: [],    // { id, title, url, category, description }
     settings: {
       themeColorSet: 'default',
+      aiApiKey: '',
     },
   };
 }
@@ -83,6 +84,13 @@ class Store {
   getTrip() { return this._data.trip; }
   updateTrip(patch) {
     this._data.trip = { ...this._data.trip, ...patch };
+    this._save();
+  }
+
+  // ---- الإعدادات ----
+  getSettings() { return this._data.settings; }
+  updateSettings(patch) {
+    this._data.settings = { ...this._data.settings, ...patch };
     this._save();
   }
 

@@ -141,7 +141,7 @@ function wireGlobalUI() {
       e.preventDefault();
       openSearch();
     }
-    if (e.key === 'Escape') { closeSearch(); closeNavSheet(); }
+    if (e.key === 'Escape') { closeSearch(); closeNavSheet(); closeModal(); }
   });
 }
 
@@ -150,6 +150,7 @@ function injectStaticIcons() {
   qs('#search-open-btn').innerHTML = icon('search', 19);
   qs('#search-close-btn').innerHTML = icon('x', 16);
   qs('#nav-sheet-close-btn').innerHTML = icon('x', 18);
+  qs('#modal-close-btn').innerHTML = icon('x', 18);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -158,5 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
   buildBottomNav();
   buildNavSheet();
   wireGlobalUI();
+  wireModal();
   renderRoute();
 });
