@@ -70,7 +70,7 @@
 
 * { box-sizing: border-box; }
 html, body { padding: 0; margin: 0; }
-html { direction: rtl; }
+html { direction: rtl; overflow-x: hidden; width: 100%; }
 
 body {
   font-family: var(--font-ar);
@@ -80,6 +80,8 @@ body {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 h1, h2, h3, h4 { margin: 0; font-weight: 800; }
@@ -281,11 +283,11 @@ img { max-width: 100%; display: block; }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
-@media (max-width: 720px) {
+@media (max-width: 800px) {
   .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 460px) {
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 480px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
 
 .section-card-link {
@@ -611,6 +613,47 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast-error { background: var(--danger); color: #fff; }
 .toast-success { background: var(--success); color: #fff; }
+
+/* =================== تصغير الخطوط والمسافات والأزرار على الجوال =================== */
+@media (max-width: 600px) {
+  body { font-size: 14.5px; }
+  .main { padding: 14px 12px calc(var(--bottomnav-h) + 20px); }
+
+  .page-header { margin-bottom: 14px; gap: 10px; }
+  .page-header h1 { font-size: 18.5px; }
+  .page-header .desc { font-size: 12.5px; }
+  .page-header-icon { width: 38px; height: 38px; border-radius: 11px; }
+  .page-header-title-row { gap: 10px; }
+
+  .card { padding: 13px; border-radius: 14px; }
+
+  .btn { height: 40px; padding: 0 15px; font-size: 13.5px; border-radius: 11px; }
+  .btn-sm { height: 32px; padding: 0 11px; font-size: 12.5px; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; }
+
+  .chip { padding: 6px 12px; font-size: 12.5px; }
+  .badge { padding: 3px 9px; font-size: 11px; }
+
+  .field input, .field select, .field textarea { height: 42px; font-size: 14px; padding: 0 12px; }
+  .field label { font-size: 12.5px; }
+  .field-row { gap: 10px; }
+
+  .modal-header { padding: 13px; }
+  .modal-header h3 { font-size: 15px; }
+  .modal-body { padding: 13px; gap: 10px; }
+
+  .section-title-row { margin: 18px 0 10px; }
+  .section-title-row h2 { font-size: 14.5px; }
+
+  .item-card { padding: 10px; gap: 8px; }
+  .item-title { font-size: 13.5px; }
+
+  .chat-bubble { font-size: 13px; padding: 9px 12px; }
+
+  .empty-state { padding: 32px 16px; }
+  .empty-state h3 { font-size: 14.5px; }
+  .empty-state p { font-size: 12.5px; }
+}
 
 /* =================== أدوات مساعدة =================== */
 .flex { display: flex; }
