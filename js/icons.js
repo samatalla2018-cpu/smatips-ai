@@ -39,6 +39,10 @@ const ICONS = {
   wind: '<path d="M3 8h9.5a2.5 2.5 0 1 0-2.3-3.4"/><path d="M3 12.5h13.5a2.5 2.5 0 1 1-2.3 3.4"/><path d="M3 17h7.5a2.5 2.5 0 1 1-2.3 3.4"/>',
   chevronUp: '<path d="M6 15l6-6 6 6"/>',
   chevronDown: '<path d="M6 9l6 6 6-6"/>',
+  whatsapp: '<path d="M12 3.5a8.4 8.4 0 0 0-7.2 12.7L3.5 20.5l4.5-1.2A8.4 8.4 0 1 0 12 3.5z" fill="none"/><path d="M8.7 8.6c.2-.45.4-.46.6-.47.16 0 .35 0 .5.38.18.44.6 1.5.66 1.6.06.12.1.27 0 .43-.08.16-.13.26-.25.4-.13.14-.26.3-.37.4-.13.13-.26.26-.12.5.15.26.65 1.05 1.4 1.7.95.85 1.75 1.12 2 1.25.26.13.4.1.55-.06.15-.16.63-.72.8-.97.16-.25.33-.2.55-.12.23.08 1.45.68 1.7.8.25.13.42.19.48.3.06.12.06.65-.15 1.28-.22.62-1.28 1.18-1.77 1.25-.46.07-1 .1-1.62-.1-.37-.11-.85-.27-1.46-.53-2.58-1.13-4.27-3.72-4.4-3.9-.13-.18-1.05-1.4-1.05-2.68 0-1.28.66-1.9.9-2.16z" fill="currentColor" stroke="none"/>',
+  tiktok: '<path d="M14.6 3v10.3a2.7 2.7 0 1 1-2.2-2.65" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M14.6 3.3c.4 2.15 2.05 3.7 4.1 3.9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M4.3 7l7.7 6 7.7-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  phone: '<path d="M6.3 3.5h3l1.3 3.9-2 1.4a13.2 13.2 0 0 0 6.4 6.4l1.4-2 3.9 1.3v3a2 2 0 0 1-2.2 2C10.6 19 5 13.4 4.5 5.7a2 2 0 0 1 1.8-2.2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
 };
 
 function icon(name, size = 22, extraClass = '') {

@@ -151,6 +151,12 @@ function injectStaticIcons() {
   qs('#search-close-btn').innerHTML = icon('x', 16);
   qs('#nav-sheet-close-btn').innerHTML = icon('x', 18);
   qs('#modal-close-btn').innerHTML = icon('x', 18);
+
+  qs('.footer-social-icon.whatsapp').innerHTML = icon('whatsapp', 19);
+  qs('.footer-social-icon.tiktok').innerHTML = icon('tiktok', 19);
+  qs('.footer-social-icon.mail').innerHTML = icon('mail', 19);
+  qs('.footer-social-icon.phone').innerHTML = icon('phone', 19);
+  qs('#whatsapp-float-btn').innerHTML = icon('whatsapp', 27);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

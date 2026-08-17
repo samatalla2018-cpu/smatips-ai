@@ -584,6 +584,60 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 }
 .nav-sheet-overlay.open .nav-sheet { transform: translateX(0); }
 
+/* -------- الفوتر: تواصل معنا -------- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+  padding: 28px 16px calc(var(--bottomnav-h) + 24px);
+}
+@media (min-width: 901px) {
+  .site-footer { padding: 32px 32px 32px; }
+}
+.footer-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.footer-title { font-size: 16px; font-weight: 800; }
+.footer-desc { font-size: 13px; color: var(--text-muted); max-width: 360px; }
+.footer-social-row { display: flex; align-items: center; gap: 12px; margin: 10px 0 6px; }
+.footer-social-icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  transition: transform .15s, filter .15s;
+}
+.footer-social-icon:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.footer-social-icon.whatsapp { background: #25D366; }
+.footer-social-icon.tiktok { background: #111111; }
+.footer-social-icon.mail { background: var(--primary); }
+.footer-social-icon.phone { background: var(--hero-accent); }
+.footer-copy { font-size: 11.5px; color: var(--text-faint); margin-top: 8px; }
+
+/* -------- زر واتساب العائم -------- */
+.whatsapp-float {
+  position: fixed;
+  left: 16px;
+  bottom: calc(var(--bottomnav-h) + 16px);
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: #25D366;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-lg);
+  z-index: 45;
+  transition: transform .15s;
+}
+.whatsapp-float:hover { transform: scale(1.06); }
+@media (min-width: 901px) { .whatsapp-float { bottom: 20px; } }
+
 /* =================== توست =================== */
 #toast-host {
   position: fixed;
