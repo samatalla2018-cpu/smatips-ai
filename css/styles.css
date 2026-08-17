@@ -168,12 +168,13 @@ img { max-width: 100%; display: block; }
 .nav-link .icon { opacity: .9; }
 
 /* -------- المحتوى الرئيسي -------- */
-.content-col { display: flex; flex-direction: column; min-height: 100vh; }
+.content-col { display: flex; flex-direction: column; min-height: 100vh; min-width: 0; }
 
 .topbar {
   position: sticky;
   top: 0;
   z-index: 30;
+  min-width: 0;
   height: var(--header-h);
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: blur(10px);
@@ -217,6 +218,7 @@ img { max-width: 100%; display: block; }
 
 .main {
   flex: 1;
+  min-width: 0;
   padding: 20px 16px calc(var(--bottomnav-h) + 28px);
   max-width: 1080px;
   width: 100%;
@@ -277,9 +279,11 @@ img { max-width: 100%; display: block; }
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 
 .grid { display: grid; gap: 12px; }
+.grid > * { min-width: 0; }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
@@ -360,7 +364,7 @@ img { max-width: 100%; display: block; }
   white-space: nowrap;
 }
 .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
-.chip-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.chip-row { display: flex; gap: 8px; overflow-x: auto; min-width: 0; padding-bottom: 4px; scrollbar-width: none; }
 .chip-row::-webkit-scrollbar { display: none; }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
@@ -588,6 +592,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .site-footer {
   border-top: 1px solid var(--border);
   margin-top: 32px;
+  min-width: 0;
   padding: 28px 16px calc(var(--bottomnav-h) + 24px);
 }
 @media (min-width: 901px) {
