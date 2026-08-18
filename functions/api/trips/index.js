@@ -1,9 +1,11 @@
-import { jsonResponse, readSessionCookie, verifySessionToken, getSubscriptionStatus, listTrips, createTrip } from '../../_utils.js';
+import { jsonResponse, readSessionCookie, verifySessionToken, getSubscriptionStatus, normalizePhone, listTrips, createTrip } from '../../_utils.js';
 
 async function requireActiveSession(request, env) {
   const token = readSessionCookie(request);
   const session = await verifySessionToken(token, env.SESSION_SECRET);
   if (!session) return { error: jsonResponse({ error: 'الجلسة غير صالحة' }, 401) };
+  const isOwner = env.ALLOWED_PHONE && session.phone === normalizePhone(env.ALLOWED_PHONE);
+  if (isOwner) return { phone: session.phone };
   const status = await getSubscriptionStatus(env.DB, session.phone);
   if (status !== 'active') return { error: jsonResponse({ error: 'الاشتراك غير مفعّل' }, 403) };
   return { phone: session.phone };

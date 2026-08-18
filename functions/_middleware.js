@@ -1,4 +1,4 @@
-import { readSessionCookie, verifySessionToken, getSubscriptionStatus } from './_utils.js';
+import { readSessionCookie, verifySessionToken, getSubscriptionStatus, normalizePhone } from './_utils.js';
 
 const BRAND_STYLE = `
   :root{--bg:#F7F3FF;--surface:#FFFFFF;--border:#E3D8F7;--text:#1E1A33;--text-muted:#6D6488;--primary:#8B5CF6;--primary-dark:#7C3AED;}
@@ -202,6 +202,12 @@ export async function onRequest(context) {
 
   if (!session) {
     return new Response(loginHtml(), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+
+  // المالك (ALLOWED_PHONE) يتجاوز الدفع ويصل مباشرة — أي عميل آخر يجب أن يشترك فعليًا
+  const isOwner = env.ALLOWED_PHONE && session.phone === normalizePhone(env.ALLOWED_PHONE);
+  if (isOwner) {
+    return next();
   }
 
   const status = await getSubscriptionStatus(env.DB, session.phone);
