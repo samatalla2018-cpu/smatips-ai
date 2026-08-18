@@ -1,0 +1,9 @@
+# ملف خاص بأوامر D1 المحلية فقط (wrangler d1 execute -c ...) — غير مستخدم في النشر أبدًا
+# (النشر يتم بدون أي wrangler.toml حتى لا يكرر مشكلة مسح متغيرات البيئة في Cloudflare Dashboard)
+name = "smatripsai"
+compatibility_date = "2026-08-18"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "smatripsai-db"
+database_id = "8f0776b5-29f3-4673-b536-4b50dfdf9f5d"
