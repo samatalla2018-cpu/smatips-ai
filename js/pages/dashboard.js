@@ -4,15 +4,15 @@ function tripSummaryCard(trip) {
   const hasTrip = trip.country || trip.city || trip.startDate;
   if (!hasTrip) {
     return `
-      <div class="card" style="background:linear-gradient(135deg, var(--hero-from), var(--hero-to)); color:var(--text); border:none;">
+      <div class="card card-soft" style="background:linear-gradient(135deg, color-mix(in srgb, var(--hero-from) 65%, transparent), color-mix(in srgb, var(--hero-to) 65%, transparent)); color:var(--text); border:none;">
         <div class="flex items-center gap-2" style="margin-bottom:8px;">
           ${icon('sparkle', 22)}
           <span class="badge" style="background:rgba(255,255,255,.75); color:var(--hero-accent);">ابدأ الآن</span>
         </div>
-        <h2 style="font-size:19px; margin-bottom:6px; color:var(--text);">أهلًا بك في SmaTrips AI</h2>
-        <p style="color:var(--text-muted); font-size:13.5px; max-width:520px;">أضف بيانات رحلتك الأولى — الوجهة والتواريخ ونوع الرحلة — وستجد كل تفاصيل سفرتك منظمة في مكان واحد.</p>
+        <h2 style="font-size:19px; margin-bottom:6px; color:var(--text);">خطّط سفرتك بذكاء</h2>
+        <p style="color:var(--text-muted); font-size:13.5px; max-width:520px;">كل تفاصيل رحلتك وأدواتك في مكان واحد.</p>
         <a href="#/trip" class="btn btn-sm mt-3" style="background:#fff; color:var(--hero-accent);">
-          ${icon('plus', 16)}<span>إضافة بيانات الرحلة</span>
+          ${icon('plus', 16)}<span>ابدأ تخطيط رحلتي</span>
         </a>
       </div>`;
   }

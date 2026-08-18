@@ -11,10 +11,6 @@ export async function onRequestPost({ request, env }) {
   const phone = normalizePhone(body.phone);
   if (!phone) return jsonResponse({ error: 'رقم الجوال مطلوب' }, 400);
 
-  if (!env.ALLOWED_PHONE || phone !== normalizePhone(env.ALLOWED_PHONE)) {
-    return jsonResponse({ error: 'هذا الرقم غير مصرح له بالدخول' }, 403);
-  }
-
   if (!env.AUTHENTICA_API_KEY) {
     return jsonResponse({ error: 'خدمة التحقق غير مُهيّأة بعد على الخادم' }, 500);
   }

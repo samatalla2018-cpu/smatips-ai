@@ -98,9 +98,10 @@ function openServiceModal(serviceId) {
 }
 
 function serviceItemHtml(s) {
+  const iconName = SERVICE_CATEGORY_ICONS[s.category] || 'star';
   return `
     <div class="item-card" data-id="${s.id}">
-      <div class="page-header-icon" style="width:34px;height:34px;border-radius:10px;">${icon('star', 16)}</div>
+      <div class="page-header-icon" style="width:34px;height:34px;border-radius:10px;">${icon(iconName, 16)}</div>
       <div style="flex:1; min-width:0;">
         <div class="item-title">${escapeHtml(s.title)}</div>
         <div class="item-meta">

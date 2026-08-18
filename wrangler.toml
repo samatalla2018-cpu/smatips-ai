@@ -1,0 +1,8 @@
+name = "smatripsai"
+pages_build_output_dir = "."
+compatibility_date = "2026-08-18"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "smatripsai-db"
+database_id = "8f0776b5-29f3-4673-b536-4b50dfdf9f5d"

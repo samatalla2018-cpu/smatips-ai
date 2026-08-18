@@ -43,6 +43,10 @@ const ICONS = {
   tiktok: '<path d="M14.6 3v10.3a2.7 2.7 0 1 1-2.2-2.65" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M14.6 3.3c.4 2.15 2.05 3.7 4.1 3.9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
   mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M4.3 7l7.7 6 7.7-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   phone: '<path d="M6.3 3.5h3l1.3 3.9-2 1.4a13.2 13.2 0 0 0 6.4 6.4l1.4-2 3.9 1.3v3a2 2 0 0 1-2.2 2C10.6 19 5 13.4 4.5 5.7a2 2 0 0 1 1.8-2.2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+  plane: '<path d="M12 2.3l1.8 1.8v5.7l6.7 4v2l-6.7-2.1v4.1l2 1.6v1.7l-3.8-1.3-3.8 1.3v-1.7l2-1.6v-4.1l-6.7 2.1v-2l6.7-4V4.1z" fill="currentColor" stroke="none"/>',
+  restaurant: '<path d="M6.5 3v4c0 .8.5 1.4 1 1.6M8 3v9M9.5 3v4c0 .8-.5 1.4-1 1.6"/><path d="M8 12v9.5"/><path d="M16.5 2.5c-2 1-2.5 3-2.5 5.5 0 2 .8 3 2 3.3V21.5"/>',
+  coffee: '<path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8z"/><path d="M16 9.5h1.5a2.2 2.2 0 0 1 0 4.4H16"/><path d="M8.5 4.5c-.6.6-.6 1.2 0 1.8M11.5 4.5c-.6.6-.6 1.2 0 1.8"/>',
+  shield: '<path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/>',
 };
 
 function icon(name, size = 22, extraClass = '') {

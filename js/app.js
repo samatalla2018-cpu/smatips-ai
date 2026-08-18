@@ -159,6 +159,31 @@ function injectStaticIcons() {
   qs('#whatsapp-float-btn').innerHTML = icon('whatsapp', 27);
 }
 
+function maybeShowPaymentSuccess() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('payment') !== 'return') return;
+
+  // نحذف ?payment=return من الرابط فورًا حتى لا تُعاد الشاشة عند التحديث لاحقًا
+  history.replaceState(null, '', location.pathname + location.hash);
+
+  const overlay = qs('#payment-success-overlay');
+  qs('#payment-success-icon').innerHTML = icon('check', 28);
+  overlay.classList.add('open');
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+  qs('#success-open-assistant-btn').addEventListener('click', () => {
+    overlay.classList.remove('open');
+    navigate('/assistant');
+  });
+  qs('#success-download-trip-btn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    await saveAndDownloadTripFile();
+    btn.disabled = false;
+    overlay.classList.remove('open');
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   injectStaticIcons();
   buildSidebar();
@@ -167,4 +192,5 @@ document.addEventListener('DOMContentLoaded', () => {
   wireGlobalUI();
   wireModal();
   renderRoute();
+  maybeShowPaymentSuccess();
 });

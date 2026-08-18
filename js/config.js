@@ -13,6 +13,7 @@ const SECTIONS = [
   { id: 'links', path: '/links', title: 'روابط مفيدة وحجوزات', icon: 'link', short: 'الروابط', color: 'primary', desc: 'تذاكر، حجوزات، تأشيرة وتأمين السفر' },
   { id: 'services', path: '/services', title: 'خدمات موصى بها', icon: 'star', short: 'الخدمات', color: 'accent', desc: 'خدمات مقترحة لتسهيل رحلتك' },
   { id: 'assistant', path: '/assistant', title: 'مساعد السفر الذكي', icon: 'sparkle', short: 'المساعد', color: 'primary', desc: 'اسألني عن رحلتك، جدولك، الطقس، الأماكن أو أي تفاصيل تساعدك أثناء السفر' },
+  { id: 'trips', path: '/trips', title: 'رحلاتي', icon: 'suitcase', short: 'رحلاتي', color: 'primary', desc: 'ملفات رحلاتك المحفوظة، جاهزة للتنزيل في أي وقت' },
 ];
 
 const BOTTOM_NAV_IDS = ['dashboard', 'itinerary', 'tasks', 'places', 'more'];
@@ -21,8 +22,8 @@ const TRIP_TYPES = ['سياحية', 'عمل', 'عائلية', 'مغامرة', '�
 
 const PLACE_TYPES = [
   { id: 'hotel', label: 'فندق/إقامة', icon: 'suitcase' },
-  { id: 'restaurant', label: 'مطعم', icon: 'star' },
-  { id: 'cafe', label: 'كافيه', icon: 'star' },
+  { id: 'restaurant', label: 'مطعم', icon: 'restaurant' },
+  { id: 'cafe', label: 'كافيه', icon: 'coffee' },
   { id: 'attraction', label: 'معلم سياحي', icon: 'map' },
   { id: 'activity', label: 'نشاط', icon: 'sparkle' },
   { id: 'shopping', label: 'تسوق', icon: 'bag' },
@@ -36,7 +37,25 @@ const PACKING_CATEGORIES = ['ملابس', 'إلكترونيات', 'مستحضر�
 
 const LINK_CATEGORIES = ['تذاكر طيران', 'حجز فندق', 'تأشيرة', 'تأمين سفر', 'مواصلات', 'أخرى'];
 
+const LINK_CATEGORY_ICONS = {
+  'تذاكر طيران': 'plane',
+  'حجز فندق': 'suitcase',
+  'تأشيرة': 'passport',
+  'تأمين سفر': 'shield',
+  'مواصلات': 'navigation',
+  'أخرى': 'link',
+};
+
 const SERVICE_CATEGORIES = ['اتصالات وإنترنت', 'تأمين', 'نقل ومواصلات', 'جولات سياحية', 'مساعد ذكاء اصطناعي', 'أخرى'];
+
+const SERVICE_CATEGORY_ICONS = {
+  'اتصالات وإنترنت': 'globe',
+  'تأمين': 'shield',
+  'نقل ومواصلات': 'navigation',
+  'جولات سياحية': 'map',
+  'مساعد ذكاء اصطناعي': 'sparkle',
+  'أخرى': 'star',
+};
 
 // قائمة مرجعية مبسطة لأنواع المقابس الكهربائية الشائعة حسب الدولة
 const PLUG_REFERENCE = {
@@ -67,6 +86,8 @@ window.PLACE_TYPES = PLACE_TYPES;
 window.TASK_CATEGORIES = TASK_CATEGORIES;
 window.PACKING_CATEGORIES = PACKING_CATEGORIES;
 window.LINK_CATEGORIES = LINK_CATEGORIES;
+window.LINK_CATEGORY_ICONS = LINK_CATEGORY_ICONS;
 window.SERVICE_CATEGORIES = SERVICE_CATEGORIES;
+window.SERVICE_CATEGORY_ICONS = SERVICE_CATEGORY_ICONS;
 window.PLUG_REFERENCE = PLUG_REFERENCE;
 window.CURRENCIES = CURRENCIES;

@@ -62,9 +62,10 @@ function openLinkModal(linkId) {
 }
 
 function linkItemHtml(l) {
+  const iconName = LINK_CATEGORY_ICONS[l.category] || 'link';
   return `
     <div class="item-card" data-id="${l.id}">
-      <div class="page-header-icon" style="width:34px;height:34px;border-radius:10px;">${icon('link', 16)}</div>
+      <div class="page-header-icon" style="width:34px;height:34px;border-radius:10px;">${icon(iconName, 16)}</div>
       <div style="flex:1; min-width:0;">
         <div class="item-title">${escapeHtml(l.title)}</div>
         <div class="item-meta">

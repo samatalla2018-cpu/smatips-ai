@@ -1,4 +1,4 @@
-import { jsonResponse, normalizePhone, verifyOtpViaAuthentica, createSessionToken } from '../_utils.js';
+import { jsonResponse, normalizePhone, verifyOtpViaAuthentica, createSessionToken, ensureUserAndSubscription } from '../_utils.js';
 
 export async function onRequestPost({ request, env }) {
   let body;
@@ -12,16 +12,14 @@ export async function onRequestPost({ request, env }) {
   const otp = (body.otp || '').trim();
   if (!phone || !otp) return jsonResponse({ error: 'بيانات ناقصة' }, 400);
 
-  if (!env.ALLOWED_PHONE || phone !== normalizePhone(env.ALLOWED_PHONE)) {
-    return jsonResponse({ error: 'هذا الرقم غير مصرح له بالدخول' }, 403);
-  }
-
   const { ok, data } = await verifyOtpViaAuthentica(env.AUTHENTICA_API_KEY, phone, otp);
   if (!ok || data?.success === false) {
     return jsonResponse({ error: data?.message || 'رمز التحقق غير صحيح' }, 401);
   }
 
-  const token = await createSessionToken(env.SESSION_SECRET);
+  await ensureUserAndSubscription(env.DB, phone);
+
+  const token = await createSessionToken(env.SESSION_SECRET, phone);
   return jsonResponse(
     { success: true },
     200,
