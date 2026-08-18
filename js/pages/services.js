@@ -1,5 +1,45 @@
 // صفحة الخدمات الموصى بها — CRUD كامل + فلترة حقيقية
 
+// بطاقات حجز فعلية (روابط تسويقية بالعمولة) — ثابتة، لا تُحذف ولا تخضع للفلترة
+const RECOMMENDED_BOOKINGS = [
+  {
+    emoji: '✈️',
+    title: 'احجز رحلتك مع طيران ناس',
+    desc: 'ابحث عن رحلتك واحجز مباشرة',
+    cta: 'احجز الآن',
+    url: 'https://www.linkaraby.com/scripts/2xch8l8dq0?a_aid=67c35aca335f4&a_bid=fbf72ec9',
+  },
+  {
+    emoji: '📶',
+    title: 'شريحة إنترنت Airalo',
+    desc: 'إنترنت للسفر بدون الحاجة لشريحة تقليدية',
+    cta: 'احصل على الشريحة',
+    url: 'https://www.linkaraby.com/scripts/2xch8l8dq0?a_aid=67c35aca335f4&a_bid=aadd1098',
+  },
+];
+
+function bookingCardHtml(b) {
+  return `
+    <a class="booking-card" href="${escapeHtml(b.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="booking-card-emoji">${b.emoji}</div>
+      <div class="booking-card-body">
+        <div class="booking-card-title">${escapeHtml(b.title)}</div>
+        <div class="booking-card-desc">${escapeHtml(b.desc)}</div>
+      </div>
+      <span class="btn btn-primary btn-sm booking-card-cta">${icon('external', 14)}<span>${escapeHtml(b.cta)}</span></span>
+    </a>`;
+}
+
+function recommendedBookingsSection() {
+  return `
+    <div class="section-title-row" style="margin-top:0;">
+      <h2>حجوزات موصى بها</h2>
+    </div>
+    <div class="grid grid-2">
+      ${RECOMMENDED_BOOKINGS.map(bookingCardHtml).join('')}
+    </div>`;
+}
+
 let servicesFilter = 'الكل';
 
 function serviceFormHtml(service) {
@@ -93,6 +133,10 @@ function renderServices(container) {
       iconName: 'star',
       actions: `<button class="btn btn-primary btn-sm" id="add-service-btn">${icon('plus', 16)}<span>إضافة خدمة</span></button>`,
     })}
+    ${recommendedBookingsSection()}
+    <div class="section-title-row">
+      <h2>خدماتك المحفوظة</h2>
+    </div>
     ${filters}
     <div class="mt-3" id="services-list">
       ${services.length ? services.map(serviceItemHtml).join('') : emptyState(

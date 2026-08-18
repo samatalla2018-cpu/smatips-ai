@@ -26,7 +26,6 @@ function defaultData() {
     services: [],    // { id, title, url, category, description }
     settings: {
       themeColorSet: 'default',
-      aiApiKey: '',
     },
   };
 }
