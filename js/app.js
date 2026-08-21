@@ -159,6 +159,41 @@ function injectStaticIcons() {
   qs('#whatsapp-float-btn').innerHTML = icon('whatsapp', 27);
 }
 
+async function initSubscribeButtons() {
+  const btns = [qs('#subscribe-nav-btn'), qs('#subscribe-nav-btn-mobile')].filter(Boolean);
+  if (!btns.length) return;
+
+  try {
+    const res = await fetch('/api/subscription/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.status === 'active') return;
+  } catch (e) {
+    return;
+  }
+
+  btns.forEach((btn) => {
+    btn.style.display = '';
+    btn.addEventListener('click', async () => {
+      const original = btn.textContent;
+      btns.forEach((b) => { b.disabled = true; b.textContent = 'جارٍ التحويل لصفحة الدفع...'; });
+      try {
+        const res = await fetch('/api/payment/create', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok || !data.url) {
+          toast(data.error || 'تعذّر بدء عملية الدفع', 'error');
+          btns.forEach((b) => { b.disabled = false; b.textContent = original; });
+          return;
+        }
+        window.location.href = data.url;
+      } catch (e) {
+        toast('تعذّر الاتصال بالخادم', 'error');
+        btns.forEach((b) => { b.disabled = false; b.textContent = original; });
+      }
+    });
+  });
+}
+
 function maybeShowPaymentSuccess() {
   const params = new URLSearchParams(location.search);
   if (params.get('payment') !== 'return') return;
@@ -193,4 +228,5 @@ document.addEventListener('DOMContentLoaded', () => {
   wireModal();
   renderRoute();
   maybeShowPaymentSuccess();
+  initSubscribeButtons();
 });
