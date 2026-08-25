@@ -9,11 +9,21 @@ export async function onRequestGet({ request, env, params }) {
 
   const isOwner = env.ALLOWED_PHONE && session.phone === normalizePhone(env.ALLOWED_PHONE);
   if (!isOwner) {
-    const status = await getSubscriptionStatus(env.DB, session.phone);
+    let status;
+    try {
+      status = await getSubscriptionStatus(env.DB, session.phone);
+    } catch {
+      return jsonResponse({ error: 'تعذّر التحقق من الاشتراك' }, 503);
+    }
     if (status !== 'active') return jsonResponse({ error: 'الاشتراك غير مفعّل' }, 403);
   }
 
-  const trip = await getTripById(env.DB, params.id);
+  let trip;
+  try {
+    trip = await getTripById(env.DB, params.id);
+  } catch {
+    return jsonResponse({ error: 'تعذّر الوصول إلى الملف' }, 503);
+  }
   if (!trip || trip.phone !== session.phone) return jsonResponse({ error: 'الملف غير موجود' }, 403);
 
   return new Response(trip.html_content, {

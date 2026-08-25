@@ -1,0 +1,17 @@
+{
+  "name": "smatripsai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SmaTrips AI — Cloudflare Pages static frontend + Pages Functions backend (D1, Authentica OTP, Moyasar payments). No bundler/build step: Functions run as-is on Cloudflare Pages.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "db:migrate:check": "node scripts/db-migrate-check.mjs",
+    "check:env": "node scripts/check-env.mjs",
+    "smoke": "node scripts/smoke-test.mjs",
+    "predeploy": "npm run test && npm run db:migrate:check && npm run check:env"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

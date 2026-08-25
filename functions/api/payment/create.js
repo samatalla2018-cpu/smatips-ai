@@ -1,4 +1,4 @@
-import { jsonResponse, readSessionCookie, verifySessionToken, attachInvoiceToSubscription } from '../../_utils.js';
+import { jsonResponse, readSessionCookie, verifySessionToken, attachInvoiceToSubscription, fetchWithTimeout } from '../../_utils.js';
 
 export async function onRequestPost({ request, env }) {
   const token = readSessionCookie(request);
@@ -17,17 +17,22 @@ export async function onRequestPost({ request, env }) {
   const origin = new URL(request.url).origin;
   const auth = btoa(`${env.MOYASAR_SECRET_KEY}:`);
 
-  const res = await fetch('https://api.moyasar.com/v1/invoices', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
-    body: JSON.stringify({
-      amount: Math.round(priceSar * 100),
-      currency: 'SAR',
-      description: 'اشتراك SmaTrips AI مدى الحياة',
-      callback_url: `${origin}/?payment=return`,
-      metadata: { phone: session.phone },
-    }),
-  });
+  let res;
+  try {
+    res = await fetchWithTimeout('https://api.moyasar.com/v1/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+      body: JSON.stringify({
+        amount: Math.round(priceSar * 100),
+        currency: 'SAR',
+        description: 'اشتراك SmaTrips AI مدى الحياة',
+        callback_url: `${origin}/?payment=return`,
+        metadata: { phone: session.phone },
+      }),
+    });
+  } catch {
+    return jsonResponse({ error: 'تعذّر الاتصال بمزوّد الدفع' }, 502);
+  }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.id || !data.url) {

@@ -427,7 +427,14 @@ export async function onRequest(context) {
     return next();
   }
 
-  const status = await getSubscriptionStatus(env.DB, session.phone);
+  // فشل الاتصال بقاعدة البيانات هنا يجب ألا يمنح وصولاً مجانيًا — نرجع خطأ صريح بدل next().
+  let status;
+  try {
+    status = await getSubscriptionStatus(env.DB, session.phone);
+  } catch {
+    return new Response('تعذّر التحقق من حالة الاشتراك، حاول مرة أخرى بعد قليل.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+
   if (status !== 'active') {
     const isReturning = url.searchParams.get('payment') === 'return';
     return new Response(paywallHtml(env.SUBSCRIPTION_PRICE_SAR, isReturning), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });

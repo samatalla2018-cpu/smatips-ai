@@ -1,6 +1,19 @@
 // أدوات مشتركة لدوال Cloudflare Pages Functions: توقيع الجلسة + التواصل مع Authentica
 
 const AUTHENTICA_BASE = 'https://api.authentica.sa/api/v1';
+const PROVIDER_TIMEOUT_MS = 8000;
+
+// طلبات خارجية (Authentica/Moyasar) محدودة بمهلة زمنية دائمًا — طلب معلّق لا يجب أن يترك
+// المستخدم أو الخادم بلا استجابة، ولا يجوز أبدًا تفسير مهلة منتهية على أنها نجاح.
+export async function fetchWithTimeout(url, options, timeoutMs = PROVIDER_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function hmacSign(secret, message) {
   const enc = new TextEncoder();
@@ -50,24 +63,42 @@ export function normalizePhone(phone) {
   return (phone || '').replace(/[\s\-()]/g, '');
 }
 
+// يرجع دائمًا { ok, data, networkError }. أي خطأ شبكة/مهلة/استثناء يُحوَّل إلى ok:false
+// بدل أن يرمي استثناءً — حتى لا يفشل الطلب بطريقة غير متوقعة عند نقطة اتخاذ قرار أمني.
 export async function sendOtpViaAuthentica(apiKey, phone) {
-  const res = await fetch(`${AUTHENTICA_BASE}/send-otp`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
-    body: JSON.stringify({ phone, method: 'sms' }),
-  });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.ok, data };
+  try {
+    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
+      body: JSON.stringify({ phone, method: 'sms' }),
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, data, networkError: false };
+  } catch {
+    return { ok: false, data: null, networkError: true };
+  }
 }
 
 export async function verifyOtpViaAuthentica(apiKey, phone, otp) {
-  const res = await fetch(`${AUTHENTICA_BASE}/verify-otp`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
-    body: JSON.stringify({ phone, otp }),
-  });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.ok, data };
+  try {
+    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
+      body: JSON.stringify({ phone, otp }),
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, data, networkError: false };
+  } catch {
+    return { ok: false, data: null, networkError: true };
+  }
+}
+
+// بوابة القرار الأمني الوحيدة: تُنشأ جلسة موثوقة فقط عندما يؤكد المزوّد النجاح صراحةً
+// (HTTP 2xx و data.success === true حرفيًا). أي شيء آخر — استجابة ناقصة، حقل مفقود،
+// success غير محدد، خطأ شبكة/مهلة، حالة HTTP غير متوقعة — يُرفض افتراضيًا (fail-closed).
+// هذه دالة نقية (pure) مختبرة مباشرة في tests/otp-verification.test.mjs.
+export function isOtpVerificationSuccessful(ok, data) {
+  return ok === true && !!data && typeof data === 'object' && data.success === true;
 }
 
 // ---- طبقة الوصول لقاعدة بيانات D1: المستخدمون + الاشتراكات + ملفات الرحلات ----
@@ -112,4 +143,83 @@ export async function createTrip(db, phone, title, htmlContent) {
 
 export async function getTripById(db, id) {
   return db.prepare('SELECT id, phone, title, html_content, created_at FROM trips WHERE id = ?').bind(id).first();
+}
+
+// ---- تحديد المعدّل (Rate limiting) لطلبات إرسال/تحقق رمز OTP ----
+// يُستخدم لمنع استنزاف رصيد الرسائل (إرسال) ومنع تخمين الرمز بالمحاولات المتكررة (تحقق).
+
+export const OTP_SEND_LIMIT = { windowMs: 10 * 60 * 1000, maxPerPhone: 3, maxPerIp: 10 };
+export const OTP_VERIFY_LIMIT = { windowMs: 10 * 60 * 1000, maxAttempts: 5 };
+
+export async function recordOtpSendAttempt(db, phone, ip) {
+  await db.prepare('INSERT INTO otp_send_attempts (phone, ip, created_at) VALUES (?, ?, ?)')
+    .bind(phone, ip || null, Date.now()).run();
+}
+
+// يرجع true إذا تجاوز الطلب الحد المسموح به (لكل هاتف أو لكل IP) خلال النافذة الزمنية.
+export async function isOtpSendRateLimited(db, phone, ip) {
+  const since = Date.now() - OTP_SEND_LIMIT.windowMs;
+  const byPhone = await db.prepare('SELECT COUNT(*) AS n FROM otp_send_attempts WHERE phone = ? AND created_at > ?')
+    .bind(phone, since).first();
+  if ((byPhone?.n || 0) >= OTP_SEND_LIMIT.maxPerPhone) return true;
+  if (ip) {
+    const byIp = await db.prepare('SELECT COUNT(*) AS n FROM otp_send_attempts WHERE ip = ? AND created_at > ?')
+      .bind(ip, since).first();
+    if ((byIp?.n || 0) >= OTP_SEND_LIMIT.maxPerIp) return true;
+  }
+  return false;
+}
+
+export async function recordOtpVerifyAttempt(db, phone, ip, success) {
+  await db.prepare('INSERT INTO otp_verify_attempts (phone, ip, success, created_at) VALUES (?, ?, ?, ?)')
+    .bind(phone, ip || null, success ? 1 : 0, Date.now()).run();
+}
+
+// يرجع true إذا تجاوز الهاتف الحد المسموح من محاولات التحقق (ناجحة أو فاشلة) خلال النافذة —
+// هذا يمنع تخمين الرمز بالتكرار حتى لو كان كل رمز مرسل صالحًا لفترة قصيرة.
+export async function isOtpVerifyRateLimited(db, phone) {
+  const since = Date.now() - OTP_VERIFY_LIMIT.windowMs;
+  const row = await db.prepare('SELECT COUNT(*) AS n FROM otp_verify_attempts WHERE phone = ? AND created_at > ?')
+    .bind(phone, since).first();
+  return (row?.n || 0) >= OTP_VERIFY_LIMIT.maxAttempts;
+}
+
+export function getClientIp(request) {
+  return request.headers.get('CF-Connecting-IP') || null;
+}
+
+// مقارنة زمن ثابت لسرّ الـ webhook — تمنع هجوم توقيت (timing attack) لتخمين التوكن حرفًا بحرف.
+export function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// يجلب حالة الفاتورة مباشرة من Moyasar (مصدر الحقيقة الوحيد) — لا نثق أبدًا بحقل status
+// الوارد في جسم الويبهوك نفسه؛ هذا الاستدعاء هو ما يقرر فعليًا إن كانت الفاتورة مدفوعة.
+export async function getMoyasarInvoice(secretKey, invoiceId) {
+  try {
+    const auth = btoa(`${secretKey}:`);
+    const res = await fetchWithTimeout(`https://api.moyasar.com/v1/invoices/${encodeURIComponent(invoiceId)}`, {
+      headers: { 'Authorization': `Basic ${auth}` },
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, data };
+  } catch {
+    return { ok: false, data: null };
+  }
+}
+
+// ---- سجل أحداث الدفع (لتتبع/تدقيق الدفعات ومنع معالجة مكررة بصمت) ----
+
+export async function recordPaymentEvent(db, invoiceId, status, phone) {
+  try {
+    await db.prepare('INSERT INTO payment_events (invoice_id, status, phone, processed_at) VALUES (?, ?, ?, ?)')
+      .bind(invoiceId, status, phone || null, Date.now()).run();
+    return { firstTime: true };
+  } catch {
+    // قيد UNIQUE(invoice_id, status) يمنع تكرار نفس الحدث بالضبط — هذا استدعاء مكرر (idempotent)
+    return { firstTime: false };
+  }
 }
