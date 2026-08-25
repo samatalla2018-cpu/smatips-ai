@@ -5,6 +5,10 @@ export async function onRequestGet({ request, env }) {
   const session = await verifySessionToken(token, env.SESSION_SECRET);
   if (!session) return jsonResponse({ error: 'الجلسة غير صالحة' }, 401);
 
-  const status = await getSubscriptionStatus(env.DB, session.phone);
-  return jsonResponse({ status });
+  try {
+    const status = await getSubscriptionStatus(env.DB, session.phone);
+    return jsonResponse({ status });
+  } catch {
+    return jsonResponse({ error: 'تعذّر التحقق من الاشتراك' }, 503);
+  }
 }
