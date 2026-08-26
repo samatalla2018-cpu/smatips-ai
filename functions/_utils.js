@@ -1,6 +1,6 @@
 // أدوات مشتركة لدوال Cloudflare Pages Functions: توقيع الجلسة + التواصل مع Authentica
 
-const AUTHENTICA_BASE = 'https://api.authentica.sa/api/v1';
+const AUTHENTICA_BASE = 'https://api.authentica.sa/api/sdk/v1/';
 const PROVIDER_TIMEOUT_MS = 8000;
 
 // طلبات خارجية (Authentica/Moyasar) محدودة بمهلة زمنية دائمًا — طلب معلّق لا يجب أن يترك
@@ -67,7 +67,7 @@ export function normalizePhone(phone) {
 // بدل أن يرمي استثناءً — حتى لا يفشل الطلب بطريقة غير متوقعة عند نقطة اتخاذ قرار أمني.
 export async function sendOtpViaAuthentica(apiKey, phone) {
   try {
-    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/send-otp`, {
+    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/sendOTP`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
       body: JSON.stringify({ phone, method: 'sms' }),
@@ -81,7 +81,7 @@ export async function sendOtpViaAuthentica(apiKey, phone) {
 
 export async function verifyOtpViaAuthentica(apiKey, phone, otp) {
   try {
-    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/verify-otp`, {
+    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/verifyOTP`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
       body: JSON.stringify({ phone, otp }),
