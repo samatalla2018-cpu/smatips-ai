@@ -1,6 +1,6 @@
 // أدوات مشتركة لدوال Cloudflare Pages Functions: توقيع الجلسة + التواصل مع Authentica
 
-const AUTHENTICA_BASE = 'https://api.authentica.sa/api/sdk/v1/';
+const AUTHENTICA_BASE = 'https://api.authentica.sa/api/sdk/v1';
 const PROVIDER_TIMEOUT_MS = 8000;
 
 // طلبات خارجية (Authentica/Moyasar) محدودة بمهلة زمنية دائمًا — طلب معلّق لا يجب أن يترك
