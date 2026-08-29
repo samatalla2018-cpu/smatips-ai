@@ -63,6 +63,18 @@ export function normalizePhone(phone) {
   return (phone || '').replace(/[\s\-()]/g, '');
 }
 
+// Authentica تتطلب صيغة دولية E.164 (+966...)، بينما نُخزّن الرقم محليًا بصيغته الأصلية —
+// هذا التحويل يُستخدم فقط عند الاتصال بـ Authentica، ولا يغيّر صيغة التخزين في D1.
+function toAuthenticaE164(phone) {
+  const raw = normalizePhone(phone);
+  if (raw.startsWith('+966')) return raw;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('966')) return `+${digits}`;
+  if (digits.startsWith('05')) return `+966${digits.slice(1)}`;
+  if (digits.startsWith('5')) return `+966${digits}`;
+  return raw;
+}
+
 // يرجع دائمًا { ok, data, networkError }. أي خطأ شبكة/مهلة/استثناء يُحوَّل إلى ok:false
 // بدل أن يرمي استثناءً — حتى لا يفشل الطلب بطريقة غير متوقعة عند نقطة اتخاذ قرار أمني.
 export async function sendOtpViaAuthentica(apiKey, phone) {
@@ -70,7 +82,7 @@ export async function sendOtpViaAuthentica(apiKey, phone) {
     const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/sendOTP`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
-      body: JSON.stringify({ phone, method: 'sms' }),
+      body: JSON.stringify({ phone: toAuthenticaE164(phone), method: 'sms' }),
     });
     const data = await res.json().catch(() => null);
     return { ok: res.ok, data, networkError: false };
@@ -84,7 +96,7 @@ export async function verifyOtpViaAuthentica(apiKey, phone, otp) {
     const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/verifyOTP`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
-      body: JSON.stringify({ phone, otp }),
+      body: JSON.stringify({ phone: toAuthenticaE164(phone), otp }),
     });
     const data = await res.json().catch(() => null);
     return { ok: res.ok, data, networkError: false };
