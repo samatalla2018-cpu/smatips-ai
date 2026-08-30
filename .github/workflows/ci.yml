@@ -16,5 +16,8 @@ steps:
 with:
 node-version: '24'
 
-- name: Run automated tests
+- name: Run automated tests (auth, OTP, authorization, payment)
 run: npm test
+
+- name: Schema drift check (migrations vs schema.sql)
+run: npm run d1:migrate:check
