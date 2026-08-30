@@ -15,7 +15,9 @@ export async function onRequestPost({ request, env }) {
   }
 
   const origin = new URL(request.url).origin;
-  const auth = btoa(`${env.MOYASAR_SECRET_KEY}:`);
+  // trim() يحمي من مسافة/سطر جديد ينتقل عرضًا عند نسخ المفتاح إلى إعدادات البيئة —
+  // خطأ شائع يُترجم إلى "Invalid authorization credentials" من Moyasar رغم أن المفتاح صحيح.
+  const auth = btoa(`${env.MOYASAR_SECRET_KEY.trim()}:`);
 
   let res;
   try {

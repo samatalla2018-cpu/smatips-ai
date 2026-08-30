@@ -212,7 +212,7 @@ export function timingSafeEqual(a, b) {
 // الوارد في جسم الويبهوك نفسه؛ هذا الاستدعاء هو ما يقرر فعليًا إن كانت الفاتورة مدفوعة.
 export async function getMoyasarInvoice(secretKey, invoiceId) {
   try {
-    const auth = btoa(`${secretKey}:`);
+    const auth = btoa(`${(secretKey || '').trim()}:`);
     const res = await fetchWithTimeout(`https://api.moyasar.com/v1/invoices/${encodeURIComponent(invoiceId)}`, {
       headers: { 'Authorization': `Basic ${auth}` },
     });

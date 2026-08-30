@@ -155,22 +155,11 @@ const LANDING_STYLE = `
   }
 `;
 
-function loginHtml() {
-  return `<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SmaTrips AI — مساعد المسافر الذكي</title>
-<meta name="description" content="رتّب سفرتك كلها في مكان واحد: خطتك اليومية، مهامك، أغراض السفر، الطقس، العملات، والمزيد." />
-<meta name="theme-color" content="#8B5CF6" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-<style>${BRAND_STYLE}${LANDING_STYLE}</style>
-</head>
-<body>
-
+// الأقسام التسويقية المشتركة لصفحة الهبوط (Hero + البطاقات + المزايا + الدعوة للعمل) —
+// تُستخدم دون أي تعديل في كل من صفحة تسجيل الدخول وصفحة الاشتراك بعد التحقق، حتى لا يفقد
+// المستخدم سياق المنتج (المزايا والتسعير) في أي مرحلة من رحلته قبل الدفع.
+function landingMarketingHtml() {
+  return `
   <header class="lp-header">
     <img src="/assets/logo/logo-mark.png" alt="SmaTrips AI" />
     <div>
@@ -222,7 +211,50 @@ function loginHtml() {
       <p>مو ناقصك أماكن أكثر… ناقصك طريقة أذكى ترتب فيها اللي عندك.</p>
       <button class="lp-cta" id="pitch-cta" type="button"><span class="gold-dot"></span>ابدأ تخطيط رحلتك الآن</button>
     </section>
+`;
+}
 
+function landingFooterHtml() {
+  return `
+    <footer class="lp-footer" data-animate>
+      <div class="lp-social-row">
+        <a class="lp-social-icon" href="https://wa.me/966566529226" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب">${LP_WHATSAPP_ICON}</a>
+        <a class="lp-social-icon" href="https://www.tiktok.com/@smatrips" target="_blank" rel="noopener noreferrer" aria-label="حساب تيك توك">${LP_TIKTOK_ICON}</a>
+        <a class="lp-social-icon" href="mailto:smatrips52@gmail.com" aria-label="راسلنا عبر البريد الإلكتروني">${LP_MAIL_ICON}</a>
+      </div>
+      <div class="lp-copy">© 2026 SmaTrips AI — مساعد المسافر الذكي</div>
+    </footer>
+  </div>
+`;
+}
+
+const LANDING_ANIMATE_SCRIPT = `
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in-view'); });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('[data-animate]').forEach((el) => io.observe(el));
+  } else {
+    document.querySelectorAll('[data-animate]').forEach((el) => el.classList.add('in-view'));
+  }
+`;
+
+function loginHtml() {
+  return `<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SmaTrips AI — مساعد المسافر الذكي</title>
+<meta name="description" content="رتّب سفرتك كلها في مكان واحد: خطتك اليومية، مهامك، أغراض السفر، الطقس، العملات، والمزيد." />
+<meta name="theme-color" content="#8B5CF6" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>${BRAND_STYLE}${LANDING_STYLE}</style>
+</head>
+<body>
+${landingMarketingHtml()}
     <div class="lp-login-wrap hidden" id="login-section" data-animate>
       <div class="box lp-login-card">
         <div class="lp-login-icon">${lpIcon('phone', 22)}</div>
@@ -244,17 +276,7 @@ function loginHtml() {
         <div class="msg" id="msg"></div>
       </div>
     </div>
-
-    <footer class="lp-footer" data-animate>
-      <div class="lp-social-row">
-        <a class="lp-social-icon" href="https://wa.me/966566529226" target="_blank" rel="noopener noreferrer" aria-label="تواصل عبر واتساب">${LP_WHATSAPP_ICON}</a>
-        <a class="lp-social-icon" href="https://www.tiktok.com/@smatrips" target="_blank" rel="noopener noreferrer" aria-label="حساب تيك توك">${LP_TIKTOK_ICON}</a>
-        <a class="lp-social-icon" href="mailto:smatrips52@gmail.com" aria-label="راسلنا عبر البريد الإلكتروني">${LP_MAIL_ICON}</a>
-      </div>
-      <div class="lp-copy">© 2026 SmaTrips AI — مساعد المسافر الذكي</div>
-    </footer>
-  </div>
-
+${landingFooterHtml()}
 <script>
   const msg = document.getElementById('msg');
   const stepPhone = document.getElementById('step-phone');
@@ -312,20 +334,16 @@ function loginHtml() {
     }
   });
 
-  if ('IntersectionObserver' in window) {
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in-view'); });
-    }, { threshold: 0.12 });
-    document.querySelectorAll('[data-animate]').forEach((el) => io.observe(el));
-  } else {
-    document.querySelectorAll('[data-animate]').forEach((el) => el.classList.add('in-view'));
-  }
+  ${LANDING_ANIMATE_SCRIPT}
 </script>
 </body>
 </html>`;
 }
 
-function paywallHtml(priceSar, isReturning) {
+// تُعرض للمستخدم بعد تسجيل الدخول (نجاح التحقق OTP) طالما اشتراكه غير فعّال بعد — نفس صفحة
+// الهبوط الكاملة (Hero + المزايا + التسعير) بدل بطاقة اشتراك مجرّدة، حتى يستعرض المستخدم
+// المنتج والسعر قبل الضغط على "اشترك الآن"، وعندها فقط يبدأ الدفع عبر Moyasar.
+function subscribeLandingHtml(priceSar, isReturning) {
   const priceBlock = priceSar
     ? `<div class="price">${priceSar} <span>ريال — اشتراك مدى الحياة</span></div>`
     : `<p class="sub" style="margin-top:-8px;">اشتراك مدى الحياة بدفعة واحدة</p>`;
@@ -336,35 +354,51 @@ function paywallHtml(priceSar, isReturning) {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>فعّل اشتراكك — SmaTrips AI</title>
+<meta name="description" content="رتّب سفرتك كلها في مكان واحد: خطتك اليومية، مهامك، أغراض السفر، الطقس، العملات، والمزيد." />
+<meta name="theme-color" content="#8B5CF6" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap" rel="stylesheet">
-<style>${BRAND_STYLE}</style>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>${BRAND_STYLE}${LANDING_STYLE}</style>
 </head>
 <body>
-  <div class="box">
-    <div class="step ${isReturning ? '' : 'active'}" id="step-subscribe">
-      <h1>فعّل اشتراكك في SmaTrips AI</h1>
-      <p class="sub">اشتراك واحد يفتح لك كل أدوات تخطيط رحلتك مدى الحياة</p>
-      ${priceBlock}
-      <button id="subscribe-btn" style="margin-top:14px;">اشترك الآن</button>
-      <button class="ghost" id="logout-btn">تسجيل خروج</button>
-      <div class="msg" id="msg"></div>
-    </div>
+${landingMarketingHtml()}
+    <div class="lp-login-wrap${isReturning ? '' : ' hidden'}" id="subscribe-section" data-animate>
+      <div class="box lp-login-card">
+        <div class="lp-login-icon">${lpIcon('check', 22)}</div>
+        <div class="step ${isReturning ? '' : 'active'}" id="step-subscribe">
+          <h1>فعّل اشتراكك في SmaTrips AI</h1>
+          <p class="sub">اشتراك واحد يفتح لك كل أدوات تخطيط رحلتك مدى الحياة</p>
+          ${priceBlock}
+          <button id="subscribe-btn" style="margin-top:14px;">اشترك الآن</button>
+          <button class="ghost" id="logout-btn">تسجيل خروج</button>
+          <div class="msg" id="msg"></div>
+        </div>
 
-    <div class="step ${isReturning ? 'active' : ''}" id="step-verifying">
-      <h1>جارٍ التحقق من الدفع</h1>
-      <div class="spinner"></div>
-      <p class="sub">قد يستغرق هذا بضع ثوانٍ، لا تُغلق الصفحة...</p>
+        <div class="step ${isReturning ? 'active' : ''}" id="step-verifying">
+          <h1>جارٍ التحقق من الدفع</h1>
+          <div class="spinner"></div>
+          <p class="sub">قد يستغرق هذا بضع ثوانٍ، لا تُغلق الصفحة...</p>
+        </div>
+      </div>
     </div>
-  </div>
-
+${landingFooterHtml()}
 <script>
   const msg = document.getElementById('msg');
+  const subscribeSection = document.getElementById('subscribe-section');
+
   function setMsg(text, type) {
     msg.textContent = text || '';
     msg.className = 'msg' + (type ? ' ' + type : '');
   }
+
+  function revealSubscribe() {
+    subscribeSection.classList.remove('hidden');
+    subscribeSection.classList.add('in-view');
+    subscribeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  document.getElementById('hero-cta').addEventListener('click', revealSubscribe);
+  document.getElementById('pitch-cta').addEventListener('click', revealSubscribe);
 
   document.getElementById('subscribe-btn')?.addEventListener('click', async () => {
     const btn = document.getElementById('subscribe-btn');
@@ -393,6 +427,8 @@ function paywallHtml(priceSar, isReturning) {
     }).catch(() => setTimeout(poll, 3000));
   })();
   ` : ''}
+
+  ${LANDING_ANIMATE_SCRIPT}
 </script>
 </body>
 </html>`;
@@ -437,7 +473,7 @@ export async function onRequest(context) {
 
   if (status !== 'active') {
     const isReturning = url.searchParams.get('payment') === 'return';
-    return new Response(paywallHtml(env.SUBSCRIPTION_PRICE_SAR, isReturning), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    return new Response(subscribeLandingHtml(env.SUBSCRIPTION_PRICE_SAR, isReturning), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
   return next();
