@@ -105,12 +105,15 @@ export async function verifyOtpViaAuthentica(apiKey, phone, otp) {
   }
 }
 
-// بوابة القرار الأمني الوحيدة: تُنشأ جلسة موثوقة فقط عندما يؤكد المزوّد النجاح صراحةً
-// (HTTP 2xx و data.success === true حرفيًا). أي شيء آخر — استجابة ناقصة، حقل مفقود،
-// success غير محدد، خطأ شبكة/مهلة، حالة HTTP غير متوقعة — يُرفض افتراضيًا (fail-closed).
-// هذه دالة نقية (pure) مختبرة مباشرة في tests/otp-verification.test.mjs.
+// بوابة القرار الأمني الوحيدة: تُنشأ جلسة موثوقة فقط عندما يؤكد المزوّد النجاح صراحةً.
+// وثائق Authentica الرسمية (docs.authentica.sa/api-reference/otp-verification/verify-otp) تُرجع
+// عند النجاح { status: true, message: "OTP verified successfully" } — بحقل status وليس success
+// (لا يوجد حقل success في استجابتهم إطلاقًا). فحص data.success كان يرفض كل تحقق ناجح فعليًا،
+// ويُسرّب نص Authentica الإنجليزي "OTP verified successfully" إلى المستخدم عبر مسار الخطأ.
+// أي شيء آخر — استجابة ناقصة، حقل مفقود، status غير محدد، خطأ شبكة/مهلة، حالة HTTP غير متوقعة —
+// يُرفض افتراضيًا (fail-closed). هذه دالة نقية (pure) مختبرة مباشرة في tests/otp-verification.test.mjs.
 export function isOtpVerificationSuccessful(ok, data) {
-  return ok === true && !!data && typeof data === 'object' && data.success === true;
+  return ok === true && !!data && typeof data === 'object' && data.status === true;
 }
 
 // ---- طبقة الوصول لقاعدة بيانات D1: المستخدمون + الاشتراكات + ملفات الرحلات ----

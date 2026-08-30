@@ -39,12 +39,12 @@ function jsonRes(status, body) {
 
 // ---- 1. دالة القرار النقية (unit) ----
 
-test('isOtpVerificationSuccessful: only explicit {ok:true, success:true} passes', () => {
-  assert.equal(isOtpVerificationSuccessful(true, { success: true }), true);
+test('isOtpVerificationSuccessful: only explicit {ok:true, status:true} passes (matches Authentica\'s real response shape)', () => {
+  assert.equal(isOtpVerificationSuccessful(true, { status: true, message: 'OTP verified successfully' }), true);
 });
 
 test('isOtpVerificationSuccessful: explicit failure rejected', () => {
-  assert.equal(isOtpVerificationSuccessful(true, { success: false, message: 'invalid' }), false);
+  assert.equal(isOtpVerificationSuccessful(true, { status: false, message: 'invalid' }), false);
 });
 
 test('isOtpVerificationSuccessful: malformed/empty body (data=null) rejected — the original bug', () => {
@@ -52,12 +52,12 @@ test('isOtpVerificationSuccessful: malformed/empty body (data=null) rejected —
   assert.equal(isOtpVerificationSuccessful(true, null), false);
 });
 
-test('isOtpVerificationSuccessful: 200 response missing the success field rejected', () => {
+test('isOtpVerificationSuccessful: 200 response missing the status field rejected', () => {
   assert.equal(isOtpVerificationSuccessful(true, { message: 'ok' }), false);
 });
 
-test('isOtpVerificationSuccessful: success:true but ok=false (unexpected HTTP status) rejected', () => {
-  assert.equal(isOtpVerificationSuccessful(false, { success: true }), false);
+test('isOtpVerificationSuccessful: status:true but ok=false (unexpected HTTP status) rejected', () => {
+  assert.equal(isOtpVerificationSuccessful(false, { status: true, message: 'OTP verified successfully' }), false);
 });
 
 test('isOtpVerificationSuccessful: non-object data rejected', () => {
@@ -70,7 +70,7 @@ test('isOtpVerificationSuccessful: non-object data rejected', () => {
 
 test('verify-otp: correct OTP creates a valid trusted session', async () => {
   const db = createFakeD1();
-  mockFetch(async () => jsonRes(200, { success: true }));
+  mockFetch(async () => jsonRes(200, { status: true, message: 'OTP verified successfully' }));
   try {
     const res = await verifyOtp({ request: verifyRequest('0555000001', '123456'), env: baseEnv(db) });
     assert.equal(res.status, 200);
@@ -82,9 +82,9 @@ test('verify-otp: correct OTP creates a valid trusted session', async () => {
   } finally { restoreFetch(); }
 });
 
-test('verify-otp: incorrect OTP (explicit success:false) does not create a session', async () => {
+test('verify-otp: incorrect OTP (explicit status:false) does not create a session', async () => {
   const db = createFakeD1();
-  mockFetch(async () => jsonRes(200, { success: false, message: 'رمز غير صحيح' }));
+  mockFetch(async () => jsonRes(200, { status: false, message: 'رمز غير صحيح' }));
   try {
     const res = await verifyOtp({ request: verifyRequest('0555000002', '000000'), env: baseEnv(db) });
     assert.equal(res.status, 401);
@@ -94,7 +94,7 @@ test('verify-otp: incorrect OTP (explicit success:false) does not create a sessi
 
 test('verify-otp: expired-OTP style rejection (provider explicit failure) does not create a session', async () => {
   const db = createFakeD1();
-  mockFetch(async () => jsonRes(200, { success: false, message: 'expired' }));
+  mockFetch(async () => jsonRes(200, { status: false, message: 'expired' }));
   try {
     const res = await verifyOtp({ request: verifyRequest('0555000003', '111111'), env: baseEnv(db) });
     assert.equal(res.status, 401);
@@ -113,9 +113,9 @@ test('REGRESSION — malformed provider response (200 + unparseable body) must N
   } finally { restoreFetch(); }
 });
 
-test('REGRESSION — 200 response with success field missing entirely must NOT create a session', async () => {
+test('REGRESSION — 200 response with status field missing entirely must NOT create a session', async () => {
   const db = createFakeD1();
-  mockFetch(async () => jsonRes(200, { message: 'unexpected shape, no success field' }));
+  mockFetch(async () => jsonRes(200, { message: 'unexpected shape, no status field' }));
   try {
     const res = await verifyOtp({ request: verifyRequest('0555000005', '123456'), env: baseEnv(db) });
     assert.equal(res.status, 401);
@@ -145,7 +145,7 @@ test('provider 500 error is never interpreted as success', async () => {
 
 test('provider 400 error is never interpreted as success', async () => {
   const db = createFakeD1();
-  mockFetch(async () => jsonRes(400, { success: false, message: 'bad request' }));
+  mockFetch(async () => jsonRes(400, { status: false, message: 'bad request' }));
   try {
     const res = await verifyOtp({ request: verifyRequest('0555000008', '123456'), env: baseEnv(db) });
     assert.equal(res.status, 401);
@@ -157,14 +157,14 @@ test('session is created only after confirmed verification (user/subscription ro
   const db = createFakeD1();
   const phone = '0555000009';
 
-  mockFetch(async () => jsonRes(200, { success: false }));
+  mockFetch(async () => jsonRes(200, { status: false }));
   try {
     await verifyOtp({ request: verifyRequest(phone, '000000'), env: baseEnv(db) });
     const userRow = await db.prepare('SELECT * FROM users WHERE phone = ?').bind(phone).first();
     assert.equal(userRow, null, 'no user row should exist after a failed verification');
   } finally { restoreFetch(); }
 
-  mockFetch(async () => jsonRes(200, { success: true }));
+  mockFetch(async () => jsonRes(200, { status: true, message: 'OTP verified successfully' }));
   try {
     const res = await verifyOtp({ request: verifyRequest(phone, '123456', '9.9.9.9'), env: baseEnv(db) });
     assert.equal(res.status, 200);
@@ -176,7 +176,7 @@ test('session is created only after confirmed verification (user/subscription ro
 test('repeated verify attempts are rate limited (brute-force protection)', async () => {
   const db = createFakeD1();
   const phone = '0555000010';
-  mockFetch(async () => jsonRes(200, { success: false, message: 'wrong code' }));
+  mockFetch(async () => jsonRes(200, { status: false, message: 'wrong code' }));
   try {
     let lastStatus;
     for (let i = 0; i < 7; i++) {
@@ -190,7 +190,7 @@ test('repeated verify attempts are rate limited (brute-force protection)', async
 test('repeated OTP send requests are rate limited (resend / SMS-bombing protection)', async () => {
   const db = createFakeD1();
   const phone = '0555000011';
-  mockFetch(async () => jsonRes(200, { success: true }));
+  mockFetch(async () => jsonRes(200, { status: true, message: 'OTP verified successfully' }));
   try {
     let lastStatus;
     for (let i = 0; i < 5; i++) {
