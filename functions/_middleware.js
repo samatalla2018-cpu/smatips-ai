@@ -326,7 +326,7 @@ ${landingFooterHtml()}
       const res = await fetch('/api/verify-otp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone: currentPhone, otp }) });
       const data = await res.json();
       if (!res.ok) { setMsg(data.error || 'رمز غير صحيح', 'error'); btn.disabled = false; return; }
-      setMsg('تم الدخول، جارٍ التحويل...', 'success');
+      setMsg('تم التحقق بنجاح ✅', 'success');
       window.location.href = '/';
     } catch (e) {
       setMsg('تعذّر الاتصال بالخادم', 'error');
