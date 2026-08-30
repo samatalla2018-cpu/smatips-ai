@@ -1,32 +1,38 @@
+// تسجيل دخول فوري برقم الجوال — تم إلغاء خطوة التحقق عبر رمز SMS/OTP بالكامل بقرار المنتج.
+// أي رقم جوال صالح يُنشئ جلسة موثوقة مباشرة، دون تحقق فعلي من ملكية الرقم.
+
+import {
+  jsonResponse, normalizePhone, createSessionToken, ensureUserAndSubscription,
+  recordOtpSendAttempt, isOtpSendRateLimited, getClientIp,
+} from '../_utils.js';
+import { logEvent } from '../_log.js';
+
 export async function onRequestPost({ request, env }) {
-try {
-const body = await request.json();
-const phone = String(body.phone || "").replace(/\D/g, "");
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'طلب غير صالح' }, 400);
+  }
 
-if (!phone) {
-return Response.json({ error: "رقم الجوال مطلوب" }, { status: 400 });
-}
+  const phone = normalizePhone(body.phone);
+  if (!phone) return jsonResponse({ error: 'رقم الجوال مطلوب' }, 400);
 
-const response = await fetch("https://api.authentica.sa/api/sdk/v1/sendOTP", {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"X-Authorization": env.AUTHENTICA_API_KEY
-},
-body: JSON.stringify({
-phone: phone,
-method: "sms"
-})
-});
+  const ip = getClientIp(request);
 
-const data = await response.json();
+  if (await isOtpSendRateLimited(env.DB, phone, ip)) {
+    await logEvent('login_rate_limited', { phone });
+    return jsonResponse({ error: 'محاولات كثيرة جدًا، حاول لاحقًا' }, 429);
+  }
 
-return Response.json(data, { status: response.status });
+  await recordOtpSendAttempt(env.DB, phone, ip);
+  await ensureUserAndSubscription(env.DB, phone);
 
-} catch (error) {
-return Response.json(
-{ error: error.message || "فشل إرسال رمز التحقق" },
-{ status: 500 }
-);
-}
+  const token = await createSessionToken(env.SESSION_SECRET, phone);
+  await logEvent('login_session_created', { phone });
+  return jsonResponse(
+    { success: true },
+    200,
+    { 'Set-Cookie': `smatrips_session=${encodeURIComponent(token)}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax` }
+  );
 }

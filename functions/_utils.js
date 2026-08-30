@@ -1,6 +1,5 @@
-// أدوات مشتركة لدوال Cloudflare Pages Functions: توقيع الجلسة + التواصل مع Authentica
+// أدوات مشتركة لدوال Cloudflare Pages Functions: توقيع الجلسة + التواصل مع Moyasar
 
-const AUTHENTICA_BASE = 'https://api.authentica.sa/api/sdk/v1';
 const PROVIDER_TIMEOUT_MS = 8000;
 
 // طلبات خارجية (Authentica/Moyasar) محدودة بمهلة زمنية دائمًا — طلب معلّق لا يجب أن يترك
@@ -63,56 +62,6 @@ export function normalizePhone(phone) {
   return (phone || '').replace(/[\s\-()]/g, '');
 }
 
-// Authentica تتطلب صيغة دولية E.164 (+966...)، بينما نُخزّن الرقم محليًا بصيغته الأصلية —
-// هذا التحويل يُستخدم فقط عند الاتصال بـ Authentica، ولا يغيّر صيغة التخزين في D1.
-function toAuthenticaE164(phone) {
-  const raw = normalizePhone(phone);
-  if (raw.startsWith('+966')) return raw;
-  const digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('966')) return `+${digits}`;
-  if (digits.startsWith('05')) return `+966${digits.slice(1)}`;
-  if (digits.startsWith('5')) return `+966${digits}`;
-  return raw;
-}
-
-// يرجع دائمًا { ok, data, networkError }. أي خطأ شبكة/مهلة/استثناء يُحوَّل إلى ok:false
-// بدل أن يرمي استثناءً — حتى لا يفشل الطلب بطريقة غير متوقعة عند نقطة اتخاذ قرار أمني.
-export async function sendOtpViaAuthentica(apiKey, phone) {
-  try {
-    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/sendOTP`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
-      body: JSON.stringify({ phone: toAuthenticaE164(phone), method: 'sms' }),
-    });
-    const data = await res.json().catch(() => null);
-    return { ok: res.ok, data, networkError: false };
-  } catch {
-    return { ok: false, data: null, networkError: true };
-  }
-}
-
-export async function verifyOtpViaAuthentica(apiKey, phone, otp) {
-  try {
-    const res = await fetchWithTimeout(`${AUTHENTICA_BASE}/verifyOTP`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Authorization': apiKey },
-      body: JSON.stringify({ phone: toAuthenticaE164(phone), otp }),
-    });
-    const data = await res.json().catch(() => null);
-    return { ok: res.ok, data, networkError: false };
-  } catch {
-    return { ok: false, data: null, networkError: true };
-  }
-}
-
-// بوابة القرار الأمني الوحيدة: تُنشأ جلسة موثوقة فقط عندما يؤكد المزوّد النجاح صراحةً
-// (HTTP 2xx و data.success === true حرفيًا). أي شيء آخر — استجابة ناقصة، حقل مفقود،
-// success غير محدد، خطأ شبكة/مهلة، حالة HTTP غير متوقعة — يُرفض افتراضيًا (fail-closed).
-// هذه دالة نقية (pure) مختبرة مباشرة في tests/otp-verification.test.mjs.
-export function isOtpVerificationSuccessful(ok, data) {
-  return ok === true && !!data && typeof data === 'object' && data.success === true;
-}
-
 // ---- طبقة الوصول لقاعدة بيانات D1: المستخدمون + الاشتراكات + ملفات الرحلات ----
 
 export async function ensureUserAndSubscription(db, phone) {
@@ -157,11 +106,10 @@ export async function getTripById(db, id) {
   return db.prepare('SELECT id, phone, title, html_content, created_at FROM trips WHERE id = ?').bind(id).first();
 }
 
-// ---- تحديد المعدّل (Rate limiting) لطلبات إرسال/تحقق رمز OTP ----
-// يُستخدم لمنع استنزاف رصيد الرسائل (إرسال) ومنع تخمين الرمز بالمحاولات المتكررة (تحقق).
+// ---- تحديد المعدّل (Rate limiting) لطلبات الدخول برقم الجوال ----
+// يُستخدم لمنع إساءة الاستخدام (إنشاء جلسات بكميات كبيرة لأرقام عشوائية).
 
 export const OTP_SEND_LIMIT = { windowMs: 10 * 60 * 1000, maxPerPhone: 3, maxPerIp: 10 };
-export const OTP_VERIFY_LIMIT = { windowMs: 10 * 60 * 1000, maxAttempts: 5 };
 
 export async function recordOtpSendAttempt(db, phone, ip) {
   await db.prepare('INSERT INTO otp_send_attempts (phone, ip, created_at) VALUES (?, ?, ?)')
@@ -180,20 +128,6 @@ export async function isOtpSendRateLimited(db, phone, ip) {
     if ((byIp?.n || 0) >= OTP_SEND_LIMIT.maxPerIp) return true;
   }
   return false;
-}
-
-export async function recordOtpVerifyAttempt(db, phone, ip, success) {
-  await db.prepare('INSERT INTO otp_verify_attempts (phone, ip, success, created_at) VALUES (?, ?, ?, ?)')
-    .bind(phone, ip || null, success ? 1 : 0, Date.now()).run();
-}
-
-// يرجع true إذا تجاوز الهاتف الحد المسموح من محاولات التحقق (ناجحة أو فاشلة) خلال النافذة —
-// هذا يمنع تخمين الرمز بالتكرار حتى لو كان كل رمز مرسل صالحًا لفترة قصيرة.
-export async function isOtpVerifyRateLimited(db, phone) {
-  const since = Date.now() - OTP_VERIFY_LIMIT.windowMs;
-  const row = await db.prepare('SELECT COUNT(*) AS n FROM otp_verify_attempts WHERE phone = ? AND created_at > ?')
-    .bind(phone, since).first();
-  return (row?.n || 0) >= OTP_VERIFY_LIMIT.maxAttempts;
 }
 
 export function getClientIp(request) {
