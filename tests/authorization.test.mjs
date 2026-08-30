@@ -121,6 +121,47 @@ test('owner bypass (ALLOWED_PHONE): bypass is scoped only to the configured phon
   assert.equal(res.status, 403, 'least privilege: only the exact configured owner phone may bypass, no one else');
 });
 
+test('trips API: creating a trip with missing html content is rejected (400), not saved', async () => {
+  const db = createFakeD1();
+  await activateSubscription(db, '0555777777');
+  const token = await createSessionToken(SECRET, '0555777777');
+  const env = { SESSION_SECRET: SECRET, DB: db };
+
+  const res = await createTrip({
+    request: reqWithCookie('https://smatrips.ai/api/trips', token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'رحلة بلا محتوى' }),
+    }),
+    env,
+  });
+  assert.equal(res.status, 400);
+
+  const listRes = await listTrips({ request: reqWithCookie('https://smatrips.ai/api/trips', token), env });
+  const body = await listRes.json();
+  assert.equal(body.trips.length, 0, 'a rejected malformed request must not create a trip row');
+});
+
+test('trips API: oversized trip html content is rejected (413), not saved', async () => {
+  const db = createFakeD1();
+  await activateSubscription(db, '0555888888');
+  const token = await createSessionToken(SECRET, '0555888888');
+  const env = { SESSION_SECRET: SECRET, DB: db };
+
+  const oversizedHtml = 'x'.repeat(2 * 1024 * 1024 + 1); // متجاوز حدّ 2 ميغابايت المفروض في trips/index.js
+  const res = await createTrip({
+    request: reqWithCookie('https://smatrips.ai/api/trips', token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'رحلة ضخمة', html: oversizedHtml }),
+    }),
+    env,
+  });
+  assert.equal(res.status, 413);
+
+  const listRes = await listTrips({ request: reqWithCookie('https://smatrips.ai/api/trips', token), env });
+  const body = await listRes.json();
+  assert.equal(body.trips.length, 0, 'a rejected oversized request must not create a trip row');
+});
+
 test('subscription/status: fails closed (503, not 200-active) when the DB layer errors', async () => {
   const token = await createSessionToken(SECRET, '0555666666');
   const brokenDb = {
