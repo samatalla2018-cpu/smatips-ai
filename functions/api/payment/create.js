@@ -1,4 +1,5 @@
 import { jsonResponse, readSessionCookie, verifySessionToken, attachInvoiceToSubscription, fetchWithTimeout } from '../../_utils.js';
+import { logEvent } from '../../_log.js';
 
 export async function onRequestPost({ request, env }) {
   const token = readSessionCookie(request);
@@ -38,9 +39,13 @@ export async function onRequestPost({ request, env }) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.id || !data.url) {
+    // لا نسجّل أبدًا قيمة المفتاح نفسه — فقط حالة استجابة Moyasar ورسالتها، لتشخيص أخطاء
+    // بيانات الاعتماد (Invalid authorization credentials) أو أي رفض آخر من المزوّد.
+    await logEvent('payment_create_failed', { phone: session.phone, moyasarStatus: res.status, moyasarMessage: data?.message });
     return jsonResponse({ error: data?.message || 'تعذّر إنشاء عملية الدفع' }, 502);
   }
 
+  await logEvent('payment_create_success', { phone: session.phone, invoiceId: data.id });
   await attachInvoiceToSubscription(env.DB, session.phone, data.id);
 
   return jsonResponse({ url: data.url });
