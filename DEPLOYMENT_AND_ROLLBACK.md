@@ -18,7 +18,8 @@ SOURCE (git commit on a branch)
    -> TEST (npm test — 42 automated tests: OTP fail-closed, authorization, payment webhook)
    -> STAGING/PREVIEW (Cloudflare Pages auto-creates a preview deployment for every
                          non-main branch/PR — this is the de-facto staging environment)
-   -> APPROVAL (PR review + green CI required before merge to main — see .github/workflows/ci.yml)
+   -> APPROVAL (PR review recommended before merge to main; automated CI-gated approval is
+                 NOT currently live — see "CI status" below)
    -> MIGRATION (manually run any new migrations/*.sql against the remote D1 DB BEFORE merging
                   the code that depends on them — migrations are additive-only in this change set,
                   so they are safe to apply ahead of the code deploy)
@@ -28,10 +29,12 @@ SOURCE (git commit on a branch)
 
 ### Traceability
 
-Every Cloudflare Pages deployment is natively stamped with the git commit SHA it was built from
-(visible in the Cloudflare dashboard's Deployments list) — this is a platform feature, not
-something this repo needs to add. Combined with:
-- `npm test` output (attached to the CI run for that commit),
+Every Cloudflare Pages deployment is natively stamped with the git commit SHA it was built from —
+visible both in the Cloudflare dashboard's Deployments list and via
+`wrangler pages deployment list` (each row's `Source` column). This is a platform feature, not
+something this repo needs to add, and it does **not** depend on CI existing (verified live: current
+production's `Source` matches `git rev-parse HEAD` exactly). Combined with:
+- `npm test` output (run manually before pushing, until CI is added — see "CI status" below),
 - `npm run db:migrate:check` output (schema state at that commit),
 - the migration file(s) present at that commit (`migrations/`),
 
@@ -74,9 +77,7 @@ Checks (no credentials required, sends no real OTP/payment):
 - `/api/verify-otp` never returns 200/sets a cookie for an unverified code,
 - `/api/payment/webhook` rejects a wrong token with 401.
 
-This script was written and syntax-validated in this session but **not executed against a live
-URL**, since no deployment access is available from this environment — run it manually against
-the actual preview/production URL as part of every release.
+**Executed live against production** during the Priority 5 audit (2026-08-30): `BASE_URL=https://smatripsai.pages.dev npm run smoke` -> 6/6 checks passed. Re-run this after every deploy.
 
 ## Rollback procedure
 
@@ -100,15 +101,73 @@ Database compatibility during rollback:
 - If a future migration is ever destructive, the rollback plan must include a tested D1 restore
   procedure — see [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md).
 
-## CI
+## CI status — NOT currently live (verified, root cause confirmed)
 
-`.github/workflows/ci.yml` runs `npm test` and `npm run db:migrate:check` on every push/PR to
-`main`. This gates *merges*, not the Cloudflare *deploy* step itself (which remains a Cloudflare
-account setting outside this repo's control) — but since production only deploys what's on `main`,
-and CI must be green to responsibly merge to `main`, this closes the practical gap.
+`.github/workflows/ci.yml` does **not** exist in this repository right now — verified directly
+(`git ls-files .github/` returns nothing). It was written once before (commit `439e652`) and
+removed again in the very next commit (`d53bb1e`) for a confirmed, reproducible reason: **GitHub
+rejects any push that creates or modifies a file under `.github/workflows/` unless the pushing
+credential has the separate `workflow` OAuth scope.** The credential available in this environment
+does not have it — confirmed via `gh auth status` (scopes: `gist, read:org, repo` — no `workflow`).
+This is not a one-off; the same restriction was hit and documented twice now, independently.
 
-## What was NOT done (explicitly, not silently)
+**This means: there is currently no automated CI gate on this repository.** Merges to `main` are
+not blocked by test failures. Production deployment traceability (source commit -> deployed
+artifact) does **not** depend on CI and remains fully intact regardless (see "Traceability" above,
+and the live-verified evidence in the Priority 5 audit) — but the "tests must pass before promoting"
+control described in the release flow above is currently a manual discipline (`npm test` before
+pushing), not an enforced one.
 
-- No actual production deployment or migration was performed in this session — per the
-  instruction not to perform irreversible production changes without explicit approval.
-- No real Cloudflare dashboard settings were changed (cannot be, from this codebase).
+**MANUAL ACTION REQUIRED to close this gap** — either:
+1. Add the file below directly via the GitHub web UI (repo -> Actions tab -> "set up a workflow
+   yourself", or Add file -> Create new file -> path `.github/workflows/ci.yml`), which is not
+   subject to the OAuth scope restriction since it isn't a `git push`, or
+2. Grant the `workflow` scope to whatever token/credential this environment uses for `git push`,
+   after which the file below can be committed and pushed normally.
+
+```yaml
+name: CI
+
+# يشغّل الاختبارات وفحص انحراف المخطط على كل push/PR — Cloudflare Pages لا ينشر إلى الإنتاج
+# إلا من فرع main المتصل بلوحة Cloudflare، لكن هذا الـ workflow يمنع دمج main بكود لا يجتاز
+# الاختبارات (بوابة قبل الترويج — راجع DEPLOYMENT_AND_ROLLBACK.md).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run automated tests (auth, OTP, authorization, payment)
+        run: npm test
+
+      - name: Schema-drift check (migrations vs schema.sql)
+        run: npm run db:migrate:check
+```
+
+## Priority 5 audit evidence (2026-08-30, live-verified)
+
+- Current production deployment (`wrangler pages deployment list --environment=production`) Source
+  field matches `git rev-parse HEAD` exactly (`9292f4d`) — confirmed source-to-production
+  traceability, not assumed.
+- The immediately-prior deployment (commit `479eb81`, its own stable `https://<hash>.pages.dev`
+  URL) was fetched directly and still serves the correct app — confirmed a working rollback target
+  actually exists, not just listed.
+- No Preview-environment deployments exist (`--environment=preview` returns an empty list) —
+  confirmed clean staging isolation, no stray/ambiguous artifacts (the one that existed was found
+  and removed during the Priority 2 audit).
+- `wrangler pages` has no CLI rollback subcommand — rollback is a Cloudflare dashboard action only
+  ("Rollback to this deployment" on a past deployment), as this doc already stated.
+- No actual rollback was performed (not needed — production is healthy) and no Cloudflare dashboard
+  settings were changed from this codebase (git-push-based CI cannot reach dashboard config either
+  way).
