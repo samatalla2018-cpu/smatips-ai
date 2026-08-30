@@ -45,15 +45,27 @@ export async function onRequestPost({ request, env }) {
   const isPaid = status === 'paid' || status === 'captured';
   const phone = invoice.metadata?.phone;
 
-  const { firstTime } = await recordPaymentEvent(env.DB, invoiceId, status, phone);
+  if (!isPaid) {
+    await recordPaymentEvent(env.DB, invoiceId, status, phone);
+    return jsonResponse({ received: true });
+  }
 
-  if (isPaid && firstTime) {
+  // مهم: التفعيل يحدث أولًا، وسِجلّ payment_events (الذي يقرّر "مُعالَج من قبل أم لا") يُكتب فقط
+  // بعد نجاحه فعليًا. لو عكسنا الترتيب (نسجّل الحدث ثم نفعّل)، وفشل التفعيل بسبب عطل مؤقت في D1،
+  // سيُعامَل أي طلب ويبهوك لاحق لنفس الفاتورة كـ"مكرر" ويُتجاهَل — رغم أن التفعيل لم يتم فعليًا،
+  // فيبقى العميل الذي دفع فعلاً عالقًا في status='pending' إلى الأبد دون أي محاولة تفعيل أخرى.
+  // activateSubscriptionByPhone/ByInvoiceId هي UPDATE بسيطة وآمنة التكرار، فإعادة تنفيذها عند إعادة
+  // إرسال Moyasar لنفس الحدث (بعد تعافي القاعدة) لا تُنتج أي أثر جانبي إضافي.
+  try {
     if (phone) await activateSubscriptionByPhone(env.DB, phone);
     else await activateSubscriptionByInvoiceId(env.DB, invoiceId);
-    await logEvent('payment_activated', { phone, invoiceId, status });
-  } else if (isPaid) {
-    await logEvent('payment_webhook_duplicate_ignored', { phone, invoiceId, status });
+  } catch {
+    await logEvent('payment_activation_failed', { phone, invoiceId, status });
+    return jsonResponse({ error: 'تعذّر تفعيل الاشتراك' }, 502);
   }
+
+  const { firstTime } = await recordPaymentEvent(env.DB, invoiceId, status, phone);
+  await logEvent(firstTime ? 'payment_activated' : 'payment_webhook_duplicate_ignored', { phone, invoiceId, status });
 
   return jsonResponse({ received: true });
 }

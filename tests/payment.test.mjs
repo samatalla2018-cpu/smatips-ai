@@ -143,3 +143,36 @@ test('webhook: unauthorized payment lookup cannot be used to activate an arbitra
     assert.equal(realRow.status, 'active');
   } finally { restoreFetch(); }
 });
+
+test('webhook: a transient DB failure during activation must not permanently strand a paid customer as pending', async () => {
+  const db = createFakeD1();
+  const phone = '0555700008';
+  const invoiceId = 'inv_activation_flaky';
+  await seedSubscription(db, phone, invoiceId);
+
+  let failActivation = true;
+  const flakyDb = {
+    prepare(sql) {
+      if (failActivation && sql.includes("SET status = 'active'")) {
+        throw new Error('simulated D1 outage during activation');
+      }
+      return db.prepare(sql);
+    },
+  };
+
+  mockFetch(async () => jsonRes(200, { id: invoiceId, status: 'paid', metadata: { phone } }));
+  try {
+    const first = await webhook({ request: webhookRequest({ id: invoiceId }), env: { MOYASAR_WEBHOOK_SECRET: SECRET, MOYASAR_SECRET_KEY: 'sk_test', DB: flakyDb } });
+    assert.equal(first.status, 502, 'a failed activation write must signal non-2xx so Moyasar retries, not a false 200');
+    let row = await db.prepare('SELECT status FROM subscriptions WHERE phone = ?').bind(phone).first();
+    assert.equal(row.status, 'pending');
+
+    // القاعدة تعافت والآن Moyasar يعيد إرسال نفس الحدث — يجب أن ينجح التفعيل هذه المرة،
+    // وليس أن يُعامَل كـ"مكرر تم تجاهله" رغم أن التفعيل الفعلي لم يحدث في المحاولة الأولى.
+    failActivation = false;
+    const second = await webhook({ request: webhookRequest({ id: invoiceId }), env: { MOYASAR_WEBHOOK_SECRET: SECRET, MOYASAR_SECRET_KEY: 'sk_test', DB: flakyDb } });
+    assert.equal(second.status, 200);
+    row = await db.prepare('SELECT status FROM subscriptions WHERE phone = ?').bind(phone).first();
+    assert.equal(row.status, 'active', 'the retry after recovery must still activate the subscription');
+  } finally { restoreFetch(); }
+});

@@ -47,7 +47,15 @@ export async function onRequestPost({ request, env }) {
   }
 
   await logEvent('payment_create_success', { phone: session.phone, invoiceId: data.id });
-  await attachInvoiceToSubscription(env.DB, session.phone, data.id);
+  // ربط رقم الفاتورة بالاشتراك هو تحسين تتبّع فقط — الفاتورة صالحة وقابلة للدفع عند Moyasar بغضّ
+  // النظر عن نجاح هذه الكتابة، ولاحقًا سيفعّل الويبهوك الاشتراك عبر phone من بيانات الفاتورة نفسها
+  // (metadata) بصرف النظر عن moyasar_invoice_id في D1. فشل هذه الكتابة يجب ألا يمنع المستخدم من
+  // إكمال الدفع — نسجّل الخطأ ونكمل بدل رمي استثناء غير مُعالَج يُظهر خطأ تقني للمستخدم.
+  try {
+    await attachInvoiceToSubscription(env.DB, session.phone, data.id);
+  } catch {
+    await logEvent('payment_invoice_link_failed', { phone: session.phone, invoiceId: data.id });
+  }
 
   return jsonResponse({ url: data.url });
 }

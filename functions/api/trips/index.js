@@ -19,7 +19,12 @@ async function requireActiveSession(request, env) {
 export async function onRequestGet({ request, env }) {
   const { phone, error } = await requireActiveSession(request, env);
   if (error) return error;
-  const trips = await listTrips(env.DB, phone);
+  let trips;
+  try {
+    trips = await listTrips(env.DB, phone);
+  } catch {
+    return jsonResponse({ error: 'تعذّر تحميل رحلاتك، حاول مرة أخرى' }, 503);
+  }
   return jsonResponse({ trips });
 }
 
@@ -40,6 +45,11 @@ export async function onRequestPost({ request, env }) {
   const MAX_TRIP_HTML_BYTES = 2 * 1024 * 1024; // 2MB — يمنع كتابة blobs غير محدودة الحجم
   if (html.length > MAX_TRIP_HTML_BYTES) return jsonResponse({ error: 'حجم الملف كبير جدًا' }, 413);
 
-  const trip = await createTrip(env.DB, phone, title, html);
+  let trip;
+  try {
+    trip = await createTrip(env.DB, phone, title, html);
+  } catch {
+    return jsonResponse({ error: 'تعذّر حفظ ملف الرحلة، حاول مرة أخرى' }, 503);
+  }
   return jsonResponse({ trip });
 }
