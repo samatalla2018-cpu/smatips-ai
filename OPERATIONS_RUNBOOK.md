@@ -24,8 +24,11 @@ for OTP send/verify (success, failure, rate-limited), payment webhook processing
 duplicate, provider-verify-failed), never including OTP codes, session tokens, or API keys —
 verified by reading every log call site and by the test suite's captured log output.
 
-**Requires manual configuration in Cloudflare (MANUAL ACTION REQUIRED)** — this repo cannot
-create dashboard-side alert rules:
+**Requires manual configuration in Cloudflare (MANUAL ACTION REQUIRED, confirmed not achievable
+from this environment)** — a direct check of the Cloudflare Alerting API
+(`GET /accounts/{id}/alerting/v3/policies`) with the credential available here returned `403
+Authentication error`, confirming (not assuming) that this environment cannot read or create
+dashboard-side alert rules. This must be done by someone with full Cloudflare account access:
 
 | Condition | How to detect it (using the logged events above) | Suggested Cloudflare mechanism |
 |---|---|---|
@@ -107,7 +110,15 @@ to leave in place during an app-code rollback.
 
 ## What still requires manual action (summary)
 
-- Configure Cloudflare Notifications/Logpush for the alert conditions above.
-- Fill in real incident-ownership contacts.
-- Run a real production D1 backup/export and periodic restore drill (procedure in [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md)).
+- Configure Cloudflare Notifications/Logpush for the alert conditions above (confirmed not
+  possible from this environment — the available credential gets `403` from the Alerting API).
+- Fill in real incident-ownership contacts (placeholders below — this repo cannot know real
+  personnel names/contacts and will not invent them).
+- ~~Run a real production D1 backup/export and periodic restore drill~~ — **done once, verified**
+  (2026-08-30, see [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md)); repeat on the recommended cadence
+  going forward, this was not a one-time close-out.
 - Confirm preview vs. production environment variable separation in the Cloudflare dashboard.
+- Fix `.github/workflows/ci.yml` (Priority 5) — still failing as an invalid workflow file as of
+  this audit (confirmed via `gh api .../actions/runs`); out of scope to fix here since it's a
+  Priority 5 item, but it's also the most viable in-repo "deployment failure" detection
+  mechanism once working, so it's worth closing before relying on it for Priority 6 alerting.

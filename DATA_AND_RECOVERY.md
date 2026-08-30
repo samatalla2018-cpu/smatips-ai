@@ -58,12 +58,42 @@ machine and is not referenced anywhere in the repo.
 lossless for what it captures). It does **not** constitute a production backup/recovery test,
 since it ran against local dev state, not the real `smatripsai-db` production database.
 
-### Production backup/recovery — MANUAL ACTION REQUIRED
+### Production backup/recovery — VERIFIED (2026-08-30)
 
-Cloudflare D1 does not currently offer fully-automatic scheduled backups accessible without
-account-level action. Run this manually (requires Cloudflare account access this environment
-does not have) and repeat on a regular cadence (recommended: before every schema-changing
-deployment, and at minimum monthly):
+A real backup/restore drill was executed against the actual production `smatripsai-db`, using the
+exact procedure below (this environment now has the Cloudflare account access the prior session
+lacked). Method, per the "safe, non-destructive" rule: `wrangler d1 export --remote` is read-only
+against production (never modifies it); the restore was verified into an isolated **local**
+in-memory SQLite database, never into any live Cloudflare resource — production itself was never
+written to at any point in this drill.
+
+Steps performed and result:
+1. `wrangler d1 export smatripsai-db --remote` — succeeded, produced a valid SQL dump.
+2. Restored the dump into a fresh local `node:sqlite` in-memory database — succeeded, all 6
+   expected tables present (`users`, `subscriptions`, `trips`, `otp_send_attempts`,
+   `otp_verify_attempts`, `payment_events`), schema matched exactly.
+3. Verified row counts matched a direct live query taken moments earlier (no data loss in the
+   export/restore round-trip).
+4. Verified referential integrity: 0 orphan `subscriptions` rows (every one has a matching
+   `users.phone`), 0 orphan `trips` rows — confirms the ownership rules in this document hold in
+   real production data, not just in tests.
+5. Export file deleted immediately after verification (contained real phone numbers) — confirmed
+   via `git status` that it was never staged or committed, matching the discipline already
+   established by the local-only drill above.
+6. Production health re-confirmed immediately after (`/` → 200, `/api/subscription/status`
+   unauthenticated → 401) — no impact from the drill beyond the brief read-unavailability window
+   Cloudflare itself warns about during any D1 export.
+
+**This closes the "not yet tested against real production" gap noted below in the original local
+drill.** No actual counts or data values from this drill are reproduced here beyond structural
+facts (table names, referential-integrity results) — the export itself is never retained.
+
+### Recommended cadence — MANUAL ACTION REQUIRED
+
+The drill above proves the procedure works end-to-end against real production data; it was a
+one-time verification, not a schedule. Cloudflare D1 does not offer fully-automatic scheduled
+backups accessible without account-level action. Run the same procedure manually on a regular
+cadence (recommended: before every schema-changing deployment, and at minimum monthly):
 
 ```bash
 # 1. Export the real production database (requires wrangler login with account access)
@@ -82,10 +112,10 @@ wrangler d1 execute smatripsai-db-restore-test --remote --file=backup-YYYYMMDD.s
 
 ### Recovery time expectation
 
-For a database of this size and shape (three-to-six simple tables, no large blobs beyond
-`trips.html_content`), a full export+restore cycle is expected to complete in well under a minute
-based on the local drill — actual production timing depends on data volume at the time and has
-not been measured against real production data from this environment.
+Measured directly against real production during the verified drill above: export completed in a
+few seconds, restore (into local SQLite) was near-instant, for the current production data volume
+(single-digit row counts across all tables). This will grow as real usage grows — re-measure at
+the next scheduled drill rather than relying on this figure indefinitely.
 
 ## Destructive schema changes — required process
 
