@@ -8,6 +8,7 @@
 // only inspectable in the Cloudflare dashboard (see PRODUCTION_READINESS_GAP_ANALYSIS.md).
 
 const REQUIRED = [
+  'AUTHENTICA_API_KEY',
   'SESSION_SECRET',
   'MOYASAR_SECRET_KEY',
   'MOYASAR_WEBHOOK_SECRET',

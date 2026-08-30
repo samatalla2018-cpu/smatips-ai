@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Priority 5/6: post-deploy smoke test. Hits a small set of endpoints against a live base URL
-// and checks they behave as expected — does not require any credentials, never triggers real
-// payments. Run after every deploy: `BASE_URL=https://smatripsai.pages.dev npm run smoke`.
+// and checks they behave as expected — does not require any credentials, never sends real OTPs
+// or payments. Run after every deploy: `BASE_URL=https://smatripsai.pages.dev npm run smoke`.
 
 const BASE_URL = process.env.BASE_URL || process.argv[2];
 if (!BASE_URL) {
@@ -29,11 +29,20 @@ check('unauthenticated /api/trips is rejected (401)', async () => {
   if (res.status !== 401) throw new Error(`expected 401 without a session, got ${res.status}`);
 });
 
-check('send-otp (instant phone login) rejects a request with no phone (400), does not 500', async () => {
+check('send-otp rejects a request with no phone (400), does not 500', async () => {
   const res = await fetch(`${BASE_URL}/api/send-otp`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
   });
   if (res.status !== 400) throw new Error(`expected 400 for missing phone, got ${res.status}`);
+});
+
+check('verify-otp rejects an invalid code, never 200/sets a session for garbage input', async () => {
+  const res = await fetch(`${BASE_URL}/api/verify-otp`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: '0500000000', otp: '000000' }),
+  });
+  if (res.status === 200) throw new Error('an unverified OTP must never return 200 with a session');
+  if (res.headers.get('set-cookie')) throw new Error('an unverified OTP must never set a session cookie');
 });
 
 check('payment webhook rejects a missing/wrong token (401)', async () => {

@@ -227,12 +227,18 @@ function loginHtml() {
       <div class="box lp-login-card">
         <div class="lp-login-icon">${lpIcon('phone', 22)}</div>
         <h1>سجّل دخولك بجوالك</h1>
-        <p class="sub">أدخل رقم جوالك للمتابعة، بدون كلمة مرور</p>
+        <p class="sub">رمز تحقق قصير عبر SMS، بدون كلمة مرور</p>
 
         <div class="step active" id="step-phone">
           <label>رقم الجوال</label>
           <input type="tel" id="phone-input" placeholder="9665XXXXXXXX" autocomplete="off" inputmode="tel" />
-          <button id="send-btn">متابعة</button>
+          <button id="send-btn">إرسال رمز التحقق</button>
+        </div>
+
+        <div class="step" id="step-otp">
+          <label>رمز التحقق (SMS)</label>
+          <input type="text" id="otp-input" placeholder="أدخل الرمز" autocomplete="off" inputmode="numeric" />
+          <button id="verify-btn">تحقق ودخول</button>
         </div>
 
         <div class="msg" id="msg"></div>
@@ -251,7 +257,10 @@ function loginHtml() {
 
 <script>
   const msg = document.getElementById('msg');
+  const stepPhone = document.getElementById('step-phone');
+  const stepOtp = document.getElementById('step-otp');
   const loginSection = document.getElementById('login-section');
+  let currentPhone = '';
 
   function setMsg(text, type) {
     msg.textContent = text || '';
@@ -271,11 +280,30 @@ function loginHtml() {
     const phone = document.getElementById('phone-input').value.trim();
     if (!phone) { setMsg('أدخل رقم الجوال', 'error'); return; }
     const btn = document.getElementById('send-btn');
-    btn.disabled = true; setMsg('جارٍ الدخول...', '');
+    btn.disabled = true; setMsg('جارٍ الإرسال...', '');
     try {
       const res = await fetch('/api/send-otp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone }) });
       const data = await res.json();
-      if (!res.ok) { setMsg(data.error || 'تعذّر تسجيل الدخول', 'error'); btn.disabled = false; return; }
+      if (!res.ok) { setMsg(data.error || 'تعذّر إرسال الرمز', 'error'); btn.disabled = false; return; }
+      currentPhone = phone;
+      stepPhone.classList.remove('active');
+      stepOtp.classList.add('active');
+      setMsg('تم إرسال الرمز إلى جوالك', 'success');
+    } catch (e) {
+      setMsg('تعذّر الاتصال بالخادم', 'error');
+    }
+    btn.disabled = false;
+  });
+
+  document.getElementById('verify-btn').addEventListener('click', async () => {
+    const otp = document.getElementById('otp-input').value.trim();
+    if (!otp) { setMsg('أدخل رمز التحقق', 'error'); return; }
+    const btn = document.getElementById('verify-btn');
+    btn.disabled = true; setMsg('جارٍ التحقق...', '');
+    try {
+      const res = await fetch('/api/verify-otp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone: currentPhone, otp }) });
+      const data = await res.json();
+      if (!res.ok) { setMsg(data.error || 'رمز غير صحيح', 'error'); btn.disabled = false; return; }
       setMsg('تم الدخول، جارٍ التحويل...', 'success');
       window.location.href = '/';
     } catch (e) {
