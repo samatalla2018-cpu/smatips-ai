@@ -1,4 +1,4 @@
-import { readSessionCookie, verifySessionToken, getSubscriptionStatus, normalizePhone } from './_utils.js';
+import { readSessionCookie, verifySessionToken } from './_utils.js';
 
 const BRAND_STYLE = `
   :root{--bg:#F7F3FF;--surface:#FFFFFF;--border:#E3D8F7;--text:#1E1A33;--text-muted:#6D6488;--primary:#8B5CF6;--primary-dark:#7C3AED;}
@@ -340,100 +340,6 @@ ${landingFooterHtml()}
 </html>`;
 }
 
-// تُعرض للمستخدم بعد تسجيل الدخول (نجاح التحقق OTP) طالما اشتراكه غير فعّال بعد — نفس صفحة
-// الهبوط الكاملة (Hero + المزايا + التسعير) بدل بطاقة اشتراك مجرّدة، حتى يستعرض المستخدم
-// المنتج والسعر قبل الضغط على "اشترك الآن"، وعندها فقط يبدأ الدفع عبر Moyasar.
-function subscribeLandingHtml(priceSar, isReturning) {
-  const priceBlock = priceSar
-    ? `<div class="price">${priceSar} <span>ريال — اشتراك مدى الحياة</span></div>`
-    : `<p class="sub" style="margin-top:-8px;">اشتراك مدى الحياة بدفعة واحدة</p>`;
-
-  return `<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>فعّل اشتراكك — SmaTrips AI</title>
-<meta name="description" content="رتّب سفرتك كلها في مكان واحد: خطتك اليومية، مهامك، أغراض السفر، الطقس، العملات، والمزيد." />
-<meta name="theme-color" content="#8B5CF6" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-<style>${BRAND_STYLE}${LANDING_STYLE}</style>
-</head>
-<body>
-${landingMarketingHtml()}
-    <div class="lp-login-wrap${isReturning ? '' : ' hidden'}" id="subscribe-section" data-animate>
-      <div class="box lp-login-card">
-        <div class="lp-login-icon">${lpIcon('check', 22)}</div>
-        <div class="step ${isReturning ? '' : 'active'}" id="step-subscribe">
-          <h1>فعّل اشتراكك في SmaTrips AI</h1>
-          <p class="sub">اشتراك واحد يفتح لك كل أدوات تخطيط رحلتك مدى الحياة</p>
-          ${priceBlock}
-          <button id="subscribe-btn" style="margin-top:14px;">اشترك الآن</button>
-          <button class="ghost" id="logout-btn">تسجيل خروج</button>
-          <div class="msg" id="msg"></div>
-        </div>
-
-        <div class="step ${isReturning ? 'active' : ''}" id="step-verifying">
-          <h1>جارٍ التحقق من الدفع</h1>
-          <div class="spinner"></div>
-          <p class="sub">قد يستغرق هذا بضع ثوانٍ، لا تُغلق الصفحة...</p>
-        </div>
-      </div>
-    </div>
-${landingFooterHtml()}
-<script>
-  const msg = document.getElementById('msg');
-  const subscribeSection = document.getElementById('subscribe-section');
-
-  function setMsg(text, type) {
-    msg.textContent = text || '';
-    msg.className = 'msg' + (type ? ' ' + type : '');
-  }
-
-  function revealSubscribe() {
-    subscribeSection.classList.remove('hidden');
-    subscribeSection.classList.add('in-view');
-    subscribeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  document.getElementById('hero-cta').addEventListener('click', revealSubscribe);
-  document.getElementById('pitch-cta').addEventListener('click', revealSubscribe);
-
-  document.getElementById('subscribe-btn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('subscribe-btn');
-    btn.disabled = true; setMsg('جارٍ التحويل لصفحة الدفع...', '');
-    try {
-      const res = await fetch('/api/payment/create', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok || !data.url) { setMsg(data.error || 'تعذّر بدء عملية الدفع', 'error'); btn.disabled = false; return; }
-      window.location.href = data.url;
-    } catch (e) {
-      setMsg('تعذّر الاتصال بالخادم', 'error');
-      btn.disabled = false;
-    }
-  });
-
-  document.getElementById('logout-btn')?.addEventListener('click', async () => {
-    await fetch('/api/logout', { method: 'POST' });
-    window.location.reload();
-  });
-
-  ${isReturning ? `
-  (function poll() {
-    fetch('/api/subscription/status').then((r) => r.json()).then((data) => {
-      if (data.status === 'active') { window.location.reload(); return; }
-      setTimeout(poll, 2000);
-    }).catch(() => setTimeout(poll, 3000));
-  })();
-  ` : ''}
-
-  ${LANDING_ANIMATE_SCRIPT}
-</script>
-</body>
-</html>`;
-}
-
 export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
@@ -457,24 +363,8 @@ export async function onRequest(context) {
     return new Response(loginHtml(), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
-  // المالك (ALLOWED_PHONE) يتجاوز الدفع ويصل مباشرة — أي عميل آخر يجب أن يشترك فعليًا
-  const isOwner = env.ALLOWED_PHONE && session.phone === normalizePhone(env.ALLOWED_PHONE);
-  if (isOwner) {
-    return next();
-  }
-
-  // فشل الاتصال بقاعدة البيانات هنا يجب ألا يمنح وصولاً مجانيًا — نرجع خطأ صريح بدل next().
-  let status;
-  try {
-    status = await getSubscriptionStatus(env.DB, session.phone);
-  } catch {
-    return new Response('تعذّر التحقق من حالة الاشتراك، حاول مرة أخرى بعد قليل.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-  }
-
-  if (status !== 'active') {
-    const isReturning = url.searchParams.get('payment') === 'return';
-    return new Response(subscribeLandingHtml(env.SUBSCRIPTION_PRICE_SAR, isReturning), { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-  }
-
+  // بعد تسجيل دخول موثّق (OTP)، المستخدم يدخل الموقع كاملًا (الصفحة الرئيسية، المميزات،
+  // أدوات التخطيط) بلا حاجة لاشتراك فعّال — بوابة الاشتراك تُطبَّق فقط عند استخدام أدوات
+  // التخطيط المدفوعة فعليًا (endpoints تحت /api/trips)، وليس على مستوى الصفحة هنا.
   return next();
 }

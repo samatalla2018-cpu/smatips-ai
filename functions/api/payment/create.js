@@ -39,10 +39,11 @@ export async function onRequestPost({ request, env }) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.id || !data.url) {
-    // لا نسجّل أبدًا قيمة المفتاح نفسه — فقط حالة استجابة Moyasar ورسالتها، لتشخيص أخطاء
-    // بيانات الاعتماد (Invalid authorization credentials) أو أي رفض آخر من المزوّد.
+    // نسجّل حالة استجابة Moyasar ورسالتها الخام في السجلّات فقط (لتشخيص أخطاء بيانات
+    // الاعتماد أو أي رفض آخر من المزوّد) — لا نسجّل أبدًا قيمة المفتاح نفسه. الرسالة
+    // الخام لا تُرسل للعميل أبدًا؛ يرى المستخدم رسالة عربية عامة فقط بغضّ النظر عن السبب.
     await logEvent('payment_create_failed', { phone: session.phone, moyasarStatus: res.status, moyasarMessage: data?.message });
-    return jsonResponse({ error: data?.message || 'تعذّر إنشاء عملية الدفع' }, 502);
+    return jsonResponse({ error: 'خدمة الدفع غير متاحة حاليًا، جرّب مرة أخرى لاحقًا.' }, 502);
   }
 
   await logEvent('payment_create_success', { phone: session.phone, invoiceId: data.id });
