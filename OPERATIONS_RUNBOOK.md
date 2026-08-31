@@ -11,7 +11,7 @@
 
 **Incident ownership placeholders** (no real personnel are represented in this repository —
 replace with actual names/contacts before relying on this runbook):
-- **Primary on-call / incident commander**: `<TBD — assign an owner>`
+- **Primary on-call / incident commander**: `samatalla2018-cpu`
 - **Cloudflare account owner**: `<TBD>`
 - **Authentica account owner**: `<TBD>`
 - **Moyasar account owner**: `<TBD>`
