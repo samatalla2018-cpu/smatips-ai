@@ -4,18 +4,17 @@
 
 | Provider | Used for | What breaks if it's down | Where credentials live |
 |---|---|---|---|
-| **Cloudflare Pages** | Hosting, Functions runtime, deploy pipeline | Entire site unreachable | Cloudflare account (MANUAL ACTION: record account owner/admins) |
+| **Cloudflare Pages** | Hosting, Functions runtime, deploy pipeline | Entire site unreachable | Cloudflare account (owner: `samatalla2018-cpu`) |
 | **Cloudflare D1** (`smatripsai-db`) | All persistent data (users, subscriptions, trips, rate-limit/payment event logs) | No login persistence, no trip saves, no subscription checks | Bound automatically via Pages Functions `env.DB` |
 | **Authentica** (`api.authentica.sa`) | SMS OTP send/verify | Users cannot log in at all | `AUTHENTICA_API_KEY` (Cloudflare Pages env var) |
 | **Moyasar** | Payment invoice creation + webhook | Users cannot pay / activate subscription | `MOYASAR_SECRET_KEY`, `MOYASAR_WEBHOOK_SECRET` (Cloudflare Pages env vars) |
 
-**Incident ownership placeholders** (no real personnel are represented in this repository —
-replace with actual names/contacts before relying on this runbook):
+**Incident ownership**:
 - **Primary on-call / incident commander**: `samatalla2018-cpu`
-- **Cloudflare account owner**: `<TBD>`
-- **Authentica account owner**: `<TBD>`
-- **Moyasar account owner**: `<TBD>`
-- **Escalation contact**: `<TBD>`
+- **Cloudflare account owner**: `samatalla2018-cpu`
+- **Authentica account owner**: `samatalla2018-cpu`
+- **Moyasar account owner**: `samatalla2018-cpu`
+- **Escalation contact**: `samatalla2018-cpu`
 
 ## Alerting — what's implemented vs. what needs manual configuration
 
