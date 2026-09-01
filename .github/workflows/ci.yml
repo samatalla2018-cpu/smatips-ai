@@ -1,23 +1,23 @@
 name: CI
 
 on:
-push:
-branches: [main]
-pull_request:
-branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-test:
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-- uses: actions/setup-node@v4
-with:
-node-version: '24'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
-- name: Run automated tests (auth, OTP, authorization, payment)
-run: npm test
+      - name: Run automated tests (auth, OTP, authorization, payment)
+        run: npm test
 
-- name: Schema drift check (migrations vs schema.sql)
-run: npm run d1:migrate:check
+      - name: Schema drift check (migrations vs schema.sql)
+        run: npm run db:migrate:check
