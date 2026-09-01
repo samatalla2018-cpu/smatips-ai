@@ -4,6 +4,7 @@ const STORAGE_KEY = 'smatrips.v1';
 function defaultData() {
   return {
     trip: {
+      id: '',
       title: '',
       country: '',
       city: '',

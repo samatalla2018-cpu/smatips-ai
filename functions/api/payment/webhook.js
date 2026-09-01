@@ -1,5 +1,6 @@
 import {
   jsonResponse, activateSubscriptionByInvoiceId, activateSubscriptionByPhone,
+  activateTripPayment,
   timingSafeEqual, getMoyasarInvoice, recordPaymentEvent,
 } from '../../_utils.js';
 import { logEvent } from '../../_log.js';
@@ -44,6 +45,8 @@ export async function onRequestPost({ request, env }) {
   const status = String(invoice.status || '').toLowerCase();
   const isPaid = status === 'paid' || status === 'captured';
   const phone = invoice.metadata?.phone;
+  const tripId = invoice.metadata?.trip_id;
+  const amountSar = typeof invoice.amount === 'number' ? invoice.amount / 100 : null;
 
   if (!isPaid) {
     await recordPaymentEvent(env.DB, invoiceId, status, phone);
@@ -54,18 +57,23 @@ export async function onRequestPost({ request, env }) {
   // بعد نجاحه فعليًا. لو عكسنا الترتيب (نسجّل الحدث ثم نفعّل)، وفشل التفعيل بسبب عطل مؤقت في D1،
   // سيُعامَل أي طلب ويبهوك لاحق لنفس الفاتورة كـ"مكرر" ويُتجاهَل — رغم أن التفعيل لم يتم فعليًا،
   // فيبقى العميل الذي دفع فعلاً عالقًا في status='pending' إلى الأبد دون أي محاولة تفعيل أخرى.
-  // activateSubscriptionByPhone/ByInvoiceId هي UPDATE بسيطة وآمنة التكرار، فإعادة تنفيذها عند إعادة
-  // إرسال Moyasar لنفس الحدث (بعد تعافي القاعدة) لا تُنتج أي أثر جانبي إضافي.
+  // activateTripPayment/ByInvoiceId (ومثيلاتها للاشتراك القديم) هي UPDATE بسيطة وآمنة التكرار،
+  // فإعادة تنفيذها عند إعادة إرسال Moyasar لنفس الحدث (بعد تعافي القاعدة) لا تُنتج أثرًا جانبيًا إضافيًا.
+  //
+  // الدفع أصبح لكل رحلة (trip_id في metadata) بدل اشتراك عام للهاتف. المسار البديل (بلا trip_id)
+  // متروك فقط لأي فاتورة قديمة أُنشئت قبل هذا التعديل ولا تزال في الطريق (سيناريو نشر متزامن) —
+  // كل فاتورة جديدة من الآن تحمل trip_id دائمًا (functions/api/payment/create.js).
   try {
-    if (phone) await activateSubscriptionByPhone(env.DB, phone);
+    if (tripId) await activateTripPayment(env.DB, tripId, amountSar);
+    else if (phone) await activateSubscriptionByPhone(env.DB, phone);
     else await activateSubscriptionByInvoiceId(env.DB, invoiceId);
   } catch {
-    await logEvent('payment_activation_failed', { phone, invoiceId, status });
-    return jsonResponse({ error: 'تعذّر تفعيل الاشتراك' }, 502);
+    await logEvent('payment_activation_failed', { phone, tripId, invoiceId, status });
+    return jsonResponse({ error: 'تعذّر تفعيل الدفع' }, 502);
   }
 
   const { firstTime } = await recordPaymentEvent(env.DB, invoiceId, status, phone);
-  await logEvent(firstTime ? 'payment_activated' : 'payment_webhook_duplicate_ignored', { phone, invoiceId, status });
+  await logEvent(firstTime ? 'payment_activated' : 'payment_webhook_duplicate_ignored', { phone, tripId, invoiceId, status });
 
   return jsonResponse({ received: true });
 }

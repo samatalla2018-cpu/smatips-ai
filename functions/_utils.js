@@ -144,20 +144,49 @@ export async function activateSubscriptionByInvoiceId(db, invoiceId) {
 }
 
 export async function listTrips(db, phone) {
-  const { results } = await db.prepare('SELECT id, title, created_at FROM trips WHERE phone = ? ORDER BY created_at DESC').bind(phone).all();
+  // payment_status يُعاد أيضًا حتى تعرف الواجهة أي رحلة تحتاج دفعًا وأيها مفتوحة بالفعل —
+  // لا علاقة له بأي صلاحية تُحسب على الخادم (ذلك عبر isTripUnlocked وليس هذا الحقل مباشرة).
+  const { results } = await db.prepare('SELECT id, title, payment_status, created_at FROM trips WHERE phone = ? ORDER BY created_at DESC').bind(phone).all();
   return results || [];
 }
 
-export async function createTrip(db, phone, title, htmlContent) {
+// htmlContent اختياري الآن: إنشاء "رحلة" فارغة عند بدء التخطيط (قبل وجود أي محتوى نهائي)
+// يحتاج trip_id فورًا لربط الدفع والميزات المدفوعة به — المحتوى الفعلي يُكتب لاحقًا عبر
+// updateTripContent عند الحفظ. كل رحلة جديدة تبدأ payment_status='pending' دائمًا من هنا.
+export async function createTrip(db, phone, title, htmlContent = '') {
   const id = crypto.randomUUID();
   const now = Date.now();
-  await db.prepare('INSERT INTO trips (id, phone, title, html_content, created_at) VALUES (?, ?, ?, ?, ?)')
+  await db.prepare("INSERT INTO trips (id, phone, title, html_content, payment_status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)")
     .bind(id, phone, title, htmlContent, now).run();
-  return { id, title, created_at: now };
+  return { id, title, payment_status: 'pending', created_at: now };
+}
+
+// تحديث عنوان/محتوى رحلة موجودة تخص هذا الهاتف فقط — الملكية جزء من شرط WHERE نفسه وليست
+// فحصًا منفصلًا يمكن نسيانه؛ لا يتطلب دفعًا (حفظ مسودتك الخاصة يبقى مجانيًا دائمًا).
+export async function updateTripContent(db, id, phone, title, htmlContent) {
+  const res = await db.prepare('UPDATE trips SET title = ?, html_content = ? WHERE id = ? AND phone = ?')
+    .bind(title, htmlContent, id, phone).run();
+  return res;
 }
 
 export async function getTripById(db, id) {
-  return db.prepare('SELECT id, phone, title, html_content, created_at FROM trips WHERE id = ?').bind(id).first();
+  return db.prepare('SELECT id, phone, title, html_content, payment_status, moyasar_invoice_id, created_at FROM trips WHERE id = ?').bind(id).first();
+}
+
+export async function attachInvoiceToTrip(db, tripId, invoiceId) {
+  await db.prepare('UPDATE trips SET moyasar_invoice_id = ? WHERE id = ?').bind(invoiceId, tripId).run();
+}
+
+export async function activateTripPayment(db, tripId, amountSar) {
+  await db.prepare("UPDATE trips SET payment_status = 'paid', paid_at = ?, amount_sar = ? WHERE id = ?")
+    .bind(Date.now(), amountSar ?? null, tripId).run();
+}
+
+// بوابة القرار الوحيدة لصلاحية استخدام رحلة معيّنة (تنزيلها أو استخدام ميزاتها المدفوعة مثل
+// "رتّب لي اليوم من جديد") — لا يوجد أي تجاوز لأي رقم هاتف: يجب أن يكون payment_status
+// الحقيقي المخزّن في D1 = 'paid' دائمًا. لا تُستخدم أي قيمة قادمة من الواجهة هنا إطلاقًا.
+export function isTripUnlocked(trip) {
+  return trip?.payment_status === 'paid';
 }
 
 // ---- تحديد المعدّل (Rate limiting) لطلبات إرسال/تحقق رمز OTP ----

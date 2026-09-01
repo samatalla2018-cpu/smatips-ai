@@ -107,11 +107,17 @@ function buildTripFileHtml() {
 </html>`;
 }
 
-// ينزّل ملف رحلة محفوظ مسبقًا عبر الـ endpoint المحمي (يتحقق من الجلسة والملكية على السيرفر) — لا رابط مباشر أبدًا
+// ينزّل ملف رحلة محفوظ مسبقًا عبر الـ endpoint المحمي (يتحقق من الجلسة والملكية وأن هذه الرحلة
+// تحديدًا مدفوعة على السيرفر) — لا رابط مباشر أبدًا. 403 تحديدًا يعني "غير مدفوعة بعد" وليس خطأً عامًا.
 async function downloadTripFile(id, title) {
   const res = await fetch(`/api/trips/${id}`, { credentials: 'same-origin' });
   if (!res.ok) {
-    toast('تعذّر تنزيل الملف', 'error');
+    if (res.status === 403) {
+      toast('هذه الرحلة تحتاج دفع 49 ريال أولًا', 'error');
+      navigate(`/pay?trip=${encodeURIComponent(id)}`);
+    } else {
+      toast('تعذّر تنزيل الملف', 'error');
+    }
     return false;
   }
   const blob = await res.blob();
@@ -126,12 +132,17 @@ async function downloadTripFile(id, title) {
   return true;
 }
 
-// يبني ملف الرحلة الحالي، يحفظه في حساب العميل عبر /api/trips، ثم ينزّله فورًا (بضغطة واحدة من العميل، بدون تنزيل تلقائي)
+// يبني ملف الرحلة الحالي، يحفظه (POST لأول مرة يحجز trip_id جديد ويُخزَّن محليًا، PUT للمرات
+// التالية على نفس trip_id بدل إنشاء رحلة جديدة في كل حفظ)، ثم يحاول تنزيله فورًا — الحفظ نفسه
+// مجاني دائمًا؛ التنزيل وحده يتطلب أن تكون هذه الرحلة مدفوعة (downloadTripFile يتولى ذلك).
 async function saveAndDownloadTripFile() {
   const html = buildTripFileHtml();
-  const title = store.getTrip().title || 'رحلتي';
-  const res = await fetch('/api/trips', {
-    method: 'POST',
+  const trip = store.getTrip();
+  const title = trip.title || 'رحلتي';
+  const existingId = trip.id;
+
+  const res = await fetch(existingId ? `/api/trips/${existingId}` : '/api/trips', {
+    method: existingId ? 'PUT' : 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, html }),
@@ -140,9 +151,10 @@ async function saveAndDownloadTripFile() {
     toast('تعذّر حفظ ملف الرحلة', 'error');
     return null;
   }
-  const { trip } = await res.json();
-  await downloadTripFile(trip.id, trip.title);
-  return trip;
+  const { trip: saved } = await res.json();
+  if (!existingId) store.updateTrip({ id: saved.id });
+  await downloadTripFile(saved.id, saved.title || title);
+  return saved;
 }
 
 window.buildTripFileHtml = buildTripFileHtml;

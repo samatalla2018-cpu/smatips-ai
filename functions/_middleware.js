@@ -1,4 +1,4 @@
-import { readSessionCookie, verifySessionToken, getSubscriptionStatus, normalizePhone } from './_utils.js';
+import { readSessionCookie, verifySessionToken } from './_utils.js';
 
 const BRAND_STYLE = `
   :root{--bg:#F7F3FF;--surface:#FFFFFF;--border:#E3D8F7;--text:#1E1A33;--text-muted:#6D6488;--primary:#8B5CF6;--primary-dark:#7C3AED;}
@@ -477,7 +477,7 @@ export async function onRequest(context) {
   const token = readSessionCookie(request);
   const session = await verifySessionToken(token, env.SESSION_SECRET);
 
-  // no-store على كل صفحات الدخول/الاشتراك الديناميكية — تمنع أي متصفح أو طبقة وسيطة من
+  // no-store على كل صفحات الدخول الديناميكية — تمنع أي متصفح أو طبقة وسيطة من
   // تخزين استجابة خاصة بجلسة (أو بغياب جلسة) وعرضها لاحقًا لمستخدم/جهاز آخر لم يمرّ بنفس التحقق.
   const noStoreHeaders = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' };
 
@@ -485,27 +485,8 @@ export async function onRequest(context) {
     return new Response(loginHtml(), { status: 200, headers: noStoreHeaders });
   }
 
-  // المالك (ALLOWED_PHONE) يتجاوز الدفع ويصل مباشرة — أي عميل آخر يجب أن يشترك فعليًا
-  const isOwner = env.ALLOWED_PHONE && session.phone === normalizePhone(env.ALLOWED_PHONE);
-  if (isOwner) {
-    return next();
-  }
-
-  // فشل الاتصال بقاعدة البيانات هنا يجب ألا يمنح وصولاً مجانيًا — نرجع خطأ صريح بدل next().
-  let status;
-  try {
-    status = await getSubscriptionStatus(env.DB, session.phone);
-  } catch {
-    return new Response(
-      errorPageHtml('تعذّر التحقق من حالة الاشتراك، حاول مرة أخرى بعد قليل.'),
-      { status: 503, headers: noStoreHeaders }
-    );
-  }
-
-  if (status !== 'active') {
-    const isReturning = url.searchParams.get('payment') === 'return';
-    return new Response(subscribeLandingHtml(env.SUBSCRIPTION_PRICE_SAR, isReturning), { status: 200, headers: noStoreHeaders });
-  }
-
+  // الدفع أصبح لكل رحلة (trip_id) وليس اشتراكًا عامًا يفتح الموقع كاملاً بعد تسجيل الدخول —
+  // أي جلسة صالحة تدخل SPA مباشرة لتخطيط رحلاتها؛ صلاحية كل رحلة على حدة (trip_id + payment_status)
+  // تُتحقّق داخل نقاط API الخاصة بالرحلات/الدفع (functions/_utils.js: isTripUnlocked)، وليس هنا.
   return next();
 }
