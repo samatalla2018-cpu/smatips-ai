@@ -7,7 +7,10 @@ export async function onRequestGet({ request, env }) {
 
   try {
     const status = await getSubscriptionStatus(env.DB, session.phone);
-    return jsonResponse({ status });
+    // price_sar يُضاف هنا فقط ليقرأه العميل عند عرض شاشة الدفع لكل رحلة (js/pages/pay.js) —
+    // بدل تكرار/تخمين السعر في JS، مصدر الحقيقة الوحيد يبقى env.SUBSCRIPTION_PRICE_SAR نفسه.
+    const priceSar = Number(env.SUBSCRIPTION_PRICE_SAR) || null;
+    return jsonResponse({ status, price_sar: priceSar });
   } catch {
     return jsonResponse({ error: 'تعذّر التحقق من الاشتراك' }, 503);
   }

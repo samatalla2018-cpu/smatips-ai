@@ -159,38 +159,30 @@ function injectStaticIcons() {
   qs('#whatsapp-float-btn').innerHTML = icon('whatsapp', 27);
 }
 
+// يظهر زر الدفع في القوائم فقط عندما توجد رحلة حالية (trip.id) وغير مفتوحة بعد — الدفع أصبح
+// لكل رحلة، فلا معنى لزر "اشترك" عام بلا رحلة محدَّدة. لا يبدأ الدفع مباشرة من هنا؛ يوجّه
+// إلى صفحة الدفع المخصّصة لهذه الرحلة (#/pay) التي تعرض السعر وتفاصيل الرحلة قبل الدفع.
 async function initSubscribeButtons() {
   const btns = [qs('#subscribe-nav-btn'), qs('#subscribe-nav-btn-mobile')].filter(Boolean);
   if (!btns.length) return;
 
+  const tripId = store.getTrip().id;
+  if (!tripId) return;
+
   try {
-    const res = await fetch('/api/subscription/status');
+    const res = await fetch('/api/trips', { credentials: 'same-origin' });
     if (!res.ok) return;
-    const data = await res.json();
-    if (data.status === 'active') return;
+    const { trips } = await res.json();
+    const mine = trips.find((t) => t.id === tripId);
+    if (!mine || mine.unlocked) return;
   } catch (e) {
     return;
   }
 
   btns.forEach((btn) => {
+    btn.textContent = 'ادفع 49 ريال لفتح رحلتك';
     btn.style.display = '';
-    btn.addEventListener('click', async () => {
-      const original = btn.textContent;
-      btns.forEach((b) => { b.disabled = true; b.textContent = 'جارٍ التحويل لصفحة الدفع...'; });
-      try {
-        const res = await fetch('/api/payment/create', { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok || !data.url) {
-          toast(data.error || 'تعذّر بدء عملية الدفع', 'error');
-          btns.forEach((b) => { b.disabled = false; b.textContent = original; });
-          return;
-        }
-        window.location.href = data.url;
-      } catch (e) {
-        toast('تعذّر الاتصال بالخادم', 'error');
-        btns.forEach((b) => { b.disabled = false; b.textContent = original; });
-      }
-    });
+    btn.addEventListener('click', () => navigate(`/pay?trip=${encodeURIComponent(tripId)}`));
   });
 }
 

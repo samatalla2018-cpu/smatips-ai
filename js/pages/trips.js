@@ -39,6 +39,7 @@ async function loadTripsList(listEl) {
 }
 
 function renderTrips(container) {
+  const hasCurrentTrip = !!store.getTrip().id;
   container.innerHTML = `
     ${pageHeader({
       title: 'رحلاتي',
@@ -46,6 +47,14 @@ function renderTrips(container) {
       iconName: 'suitcase',
       actions: `<button class="btn btn-primary btn-sm" id="create-tripfile-btn">${icon('plus', 16)}<span>إنشاء ملف رحلة جديد</span></button>`,
     })}
+    ${hasCurrentTrip ? `
+    <div class="card mt-3 flex items-center gap-3">
+      <div style="flex:1;">
+        <div class="item-title">تبدأ رحلة أخرى؟</div>
+        <div class="text-sm text-muted">ينهي هذا التخطيط الحالي في المتصفح ويبدأ رحلة جديدة بـ trip_id مستقل يحتاج دفعًا خاصًا به — رحلتك الحالية تبقى محفوظة إن كنت قد أنشأت ملفًا لها من قبل.</div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="new-trip-btn">${icon('plus', 15)}<span>ابدأ رحلة جديدة</span></button>
+    </div>` : ''}
     <div class="mt-3" id="trips-list"></div>
   `;
 
@@ -62,6 +71,16 @@ function renderTrips(container) {
       loadTripsList(listEl);
     }
   });
+
+  const newTripBtn = qs('#new-trip-btn');
+  if (newTripBtn) {
+    newTripBtn.addEventListener('click', () => {
+      if (!confirm('سيبدأ هذا تخطيط رحلة جديدة تمامًا في هذا المتصفح. هل تريد المتابعة؟')) return;
+      store.resetAll();
+      toast('يمكنك الآن البدء برحلة جديدة', 'success');
+      navigate('/trip');
+    });
+  }
 }
 
 registerRoute('/trips', renderTrips);

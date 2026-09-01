@@ -56,3 +56,12 @@ CREATE TABLE IF NOT EXISTS payment_events (
   UNIQUE(invoice_id, status)
 );
 CREATE INDEX IF NOT EXISTS idx_payment_events_invoice ON payment_events(invoice_id);
+
+-- ==== 0003_trip_payments.sql ====
+ALTER TABLE trips ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE trips ADD COLUMN moyasar_invoice_id TEXT;
+ALTER TABLE trips ADD COLUMN paid_at INTEGER;
+ALTER TABLE trips ADD COLUMN amount_sar INTEGER;
+
+CREATE INDEX IF NOT EXISTS idx_trips_payment_status ON trips(payment_status);
+CREATE INDEX IF NOT EXISTS idx_trips_moyasar_invoice ON trips(moyasar_invoice_id);

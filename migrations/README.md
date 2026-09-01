@@ -10,6 +10,7 @@ generated convenience file (concatenation of all migrations in order) for quick 
 |---|---|
 | `0001_init.sql` | Captures the schema as it existed before this migration chain was introduced (`users`, `subscriptions`, `trips`). |
 | `0002_ops_hardening.sql` | Additive-only: `otp_send_attempts`, `otp_verify_attempts` (rate limiting), `payment_events` (webhook idempotency/audit ledger). |
+| `0003_trip_payments.sql` | Additive-only: adds `payment_status`/`moyasar_invoice_id`/`paid_at`/`amount_sar` to `trips`, converting payment from a per-phone lifetime subscription to a per-trip 49 SAR charge. Grandfathers pre-existing trips as `paid`. |
 
 ## Rules
 
@@ -35,6 +36,7 @@ without a reviewed approval step):
 
 ```bash
 wrangler d1 execute smatripsai-db --remote --file=migrations/0002_ops_hardening.sql
+wrangler d1 execute smatripsai-db --remote --file=migrations/0003_trip_payments.sql
 ```
 
 ## Schema-drift check
@@ -51,11 +53,11 @@ This catches the case where `schema.sql` was hand-edited without a matching migr
 migration was added without regenerating `schema.sql` — i.e. schema drift between "what the
 migration chain produces" and "what we believe the schema is."
 
-## Planned (not yet applied) — 0003: constraints on existing tables
+## Planned (not yet applied) — 0004: constraints on existing tables
 
 `users`, `subscriptions`, and `trips` currently lack `FOREIGN KEY`/`CHECK` constraints (SQLite
 requires a table rebuild to add these to an existing table, which is riskier on a database with
-live user data than an additive `CREATE TABLE IF NOT EXISTS`). A future `0003_constraints.sql` is
+live user data than an additive `CREATE TABLE IF NOT EXISTS`). A future `0004_constraints.sql` is
 planned to add:
 
 - `FOREIGN KEY (phone) REFERENCES users(phone)` on `subscriptions` and `trips`,

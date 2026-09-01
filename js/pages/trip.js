@@ -1,10 +1,72 @@
 // صفحة بيانات الرحلة — نموذج كامل يُحفظ تلقائيًا في المتصفح
 
+// بطاقة حالة الرحلة: قبل وجود trip_id تعرض زر "ابدأ رحلتك" (يحجز trip_id من السيرفر)، وبعده
+// تعرض حالة الدفع الفعلية لهذه الرحلة تحديدًا (لا نثق بأي حالة محفوظة محليًا — نتحقق من
+// GET /api/trips في كل مرة). الدفع بقيمة 49 ريال يفتح هذه الرحلة فقط، وليس أي رحلة أخرى.
+function tripStatusCardHtml(trip) {
+  if (!trip.id) {
+    return `
+      <div class="card mt-3" id="trip-status-card">
+        <div class="flex items-center gap-3">
+          <div class="page-header-icon" style="width:40px;height:40px;border-radius:12px;">${icon('sparkle', 18)}</div>
+          <div style="flex:1;">
+            <div class="item-title">ابدأ هذه الرحلة</div>
+            <div class="text-sm text-muted">أنشئ رحلة جديدة (trip_id مستقل) قبل الدفع أو استخدام "رتّب لي اليوم من جديد"</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block mt-3" id="start-trip-btn">${icon('plus', 16)}<span>ابدأ رحلتي</span></button>
+      </div>`;
+  }
+  return `<div class="card mt-3" id="trip-status-card">
+    <div class="flex items-center gap-2 text-sm text-muted"><span class="spinner"></span><span>جارٍ التحقق من حالة الدفع...</span></div>
+  </div>`;
+}
+
+async function refreshTripStatusCard() {
+  const trip = store.getTrip();
+  const card = qs('#trip-status-card');
+  if (!card || !trip.id) return;
+
+  try {
+    const res = await fetch('/api/trips', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('failed');
+    const { trips } = await res.json();
+    const mine = trips.find((t) => t.id === trip.id);
+    if (!mine) {
+      card.innerHTML = `<div class="text-sm text-muted">تعذّر العثور على هذه الرحلة على حسابك.</div>`;
+      return;
+    }
+    if (mine.unlocked) {
+      card.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="page-header-icon" style="width:40px;height:40px;border-radius:12px;background:var(--success-light);color:var(--success);">${icon('check', 18)}</div>
+          <div>
+            <div class="item-title">هذه الرحلة مفتوحة ✓</div>
+            <div class="text-sm text-muted">بإمكانك استخدام "رتّب لي اليوم من جديد" وتنزيل ملف الرحلة</div>
+          </div>
+        </div>`;
+    } else {
+      card.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="page-header-icon" style="width:40px;height:40px;border-radius:12px;">${icon('wallet', 18)}</div>
+          <div style="flex:1;">
+            <div class="item-title">هذه الرحلة غير مدفوعة بعد</div>
+            <div class="text-sm text-muted">ادفع 49 ريال لفتح هذه الرحلة تحديدًا (تنزيل الملف + "رتّب لي اليوم من جديد")</div>
+          </div>
+        </div>
+        <a class="btn btn-primary btn-block mt-3" href="#/pay?trip=${encodeURIComponent(trip.id)}">${icon('wallet', 16)}<span>ادفع 49 ريال</span></a>`;
+    }
+  } catch {
+    card.innerHTML = `<div class="text-sm text-muted">تعذّر التحقق من حالة الدفع، حدّث الصفحة لاحقًا.</div>`;
+  }
+}
+
 function renderTrip(container) {
   const trip = store.getTrip();
 
   container.innerHTML = `
     ${pageHeader({ title: 'بيانات الرحلة', desc: 'هذه البيانات تُستخدم في كل أنحاء الموقع', iconName: 'passport' })}
+    ${tripStatusCardHtml(trip)}
 
     <form id="trip-form" class="card flex-col gap-3">
       <div class="field">
@@ -109,6 +171,34 @@ function renderTrip(container) {
     });
     toast('تم حفظ بيانات الرحلة', 'success');
   });
+
+  const startBtn = qs('#start-trip-btn');
+  if (startBtn) {
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true; startBtn.innerHTML = '<span>جارٍ الإنشاء...</span>';
+      try {
+        const res = await fetch('/api/trips', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: store.getTrip().title || 'رحلتي' }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.trip) {
+          toast(data.error || 'تعذّر إنشاء الرحلة', 'error');
+          startBtn.disabled = false; startBtn.innerHTML = `${icon('plus', 16)}<span>ابدأ رحلتي</span>`;
+          return;
+        }
+        store.updateTrip({ id: data.trip.id });
+        toast('تم إنشاء رحلتك', 'success');
+        renderTrip(container);
+      } catch {
+        toast('تعذّر الاتصال بالخادم', 'error');
+        startBtn.disabled = false; startBtn.innerHTML = `${icon('plus', 16)}<span>ابدأ رحلتي</span>`;
+      }
+    });
+  } else {
+    refreshTripStatusCard();
+  }
 }
 
 registerRoute('/trip', renderTrip);

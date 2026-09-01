@@ -15,6 +15,222 @@ function activityPeriod(time) {
   return 'مساء';
 }
 
+// ---------- "رتّب لي اليوم من جديد" ----------
+// ميزة محلية بالكامل: تعيد ترتيب/توقيت أنشطة اليوم الحالي فقط داخل بيانات المتصفح
+// (localStorage عبر store) — لا تلمس أي رحلة أخرى ولا أي بيانات على الخادم.
+const REPLAN_REASONS = [
+  'تأخرنا عن الجدول',
+  'الجو تغيّر',
+  'المكان مقفل',
+  'تعبنا ونبغى يوم أخف',
+  'نبغى نغيّر الأماكن',
+  'عندنا وقت أقل',
+  'عندنا وقت أكثر',
+  'سبب آخر',
+];
+const REPLAN_BACKUP_KEY = 'smatrips.v1.replanBackup';
+const REPLAN_COOLDOWN_MS = 5000;
+let lastReplanAt = 0;
+let replanInFlight = false;
+
+function nowTimeStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function minutesOfDay(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTimeStr(mins) {
+  const clamped = Math.max(0, Math.min(23 * 60 + 59, Math.round(mins / 5) * 5));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// نسخة احتياطية واحدة فقط (لليوم الذي أُعيد ترتيبه مؤخرًا) — تكفي لزر "العودة للخطة السابقة"
+// بدون بناء نظام إصدارات معقّد لا تحتاجه بيانات محلية بهذا الحجم.
+function getReplanBackup() {
+  try {
+    const raw = localStorage.getItem(REPLAN_BACKUP_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function saveReplanBackup(dayId, activities) {
+  try {
+    localStorage.setItem(REPLAN_BACKUP_KEY, JSON.stringify({ dayId, activities, savedAt: Date.now() }));
+  } catch {
+    // فشل الحفظ الاحتياطي لا يجب أن يمنع إعادة الترتيب نفسها — التراجع يصبح غير متاح فقط
+  }
+}
+function clearReplanBackup() {
+  try { localStorage.removeItem(REPLAN_BACKUP_KEY); } catch {}
+}
+
+// يحسب خطة اليوم الجديدة محليًا بدون أي استدعاء AI/API: يحافظ على الأنشطة التي وقتها المجدول
+// سبق الوقت الحالي (تُعتبر منجزة) كما هي، ويعيد توزيع/ترتيب الأنشطة المتبقية فقط حسب السبب المُختار.
+function computeReplan(activities, reason) {
+  const now = minutesOfDay(nowTimeStr());
+  const sorted = activities.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const done = sorted.filter((a) => a.time && minutesOfDay(a.time) <= now);
+  let pending = sorted.filter((a) => !a.time || minutesOfDay(a.time) > now);
+
+  if (pending.length === 0) return null;
+
+  if (reason === 'نبغى نغيّر الأماكن') pending = pending.slice().reverse();
+
+  let windowEnd;
+  if (reason === 'تعبنا ونبغى يوم أخف') windowEnd = 19 * 60;
+  else if (reason === 'عندنا وقت أقل') windowEnd = Math.min(now + 120, 22 * 60);
+  else if (reason === 'عندنا وقت أكثر') windowEnd = 23 * 60;
+  else windowEnd = 22 * 60;
+
+  const windowStart = now + 15;
+  const scheduleCount = reason === 'تعبنا ونبغى يوم أخف'
+    ? Math.max(1, Math.ceil(pending.length * 0.6))
+    : pending.length;
+
+  const scheduled = pending.slice(0, scheduleCount);
+  const unscheduled = pending.slice(scheduleCount);
+
+  const span = Math.max(windowEnd - windowStart, scheduled.length * 20);
+  const step = scheduled.length > 1 ? span / (scheduled.length - 1) : 0;
+
+  let order = done.reduce((m, a) => Math.max(m, a.order ?? 0), -1) + 1;
+  const patches = [];
+  scheduled.forEach((a, i) => {
+    patches.push({ id: a.id, time: minutesToTimeStr(windowStart + step * i), order: order++ });
+  });
+  unscheduled.forEach((a) => {
+    patches.push({ id: a.id, time: '', order: order++ });
+  });
+
+  return patches;
+}
+
+function replanReasonModalHtml() {
+  return `
+    <form id="replan-form" class="flex-col gap-3">
+      <div class="field">
+        <label>وش اللي تغيّر اليوم؟</label>
+        <select name="reason" id="replan-reason-select">
+          ${REPLAN_REASONS.map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" id="replan-note-field" style="display:none;">
+        <label>تفاصيل (اختياري)</label>
+        <textarea name="note" placeholder="اكتب باختصار وش تغيّر..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary btn-block">${icon('sparkle', 16)}<span>رتّب يومي</span></button>
+      </div>
+    </form>`;
+}
+
+function openReplanModal(container, dayId) {
+  openModal('رتّب لي اليوم من جديد', replanReasonModalHtml(), () => {
+    const select = qs('#replan-reason-select');
+    const noteField = qs('#replan-note-field');
+    select.addEventListener('change', () => { noteField.style.display = select.value === 'سبب آخر' ? 'flex' : 'none'; });
+    qs('#replan-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const reason = fd.get('reason');
+      const note = reason === 'سبب آخر' ? (fd.get('note') || '').trim().slice(0, 200) : '';
+      closeModal();
+      performReplan(container, dayId, reason, note);
+    });
+  });
+}
+
+// حماية من إساءة الاستخدام: تبريد بسيط بين الطلبات + منع طلبات متزامنة — لا حاجة لحماية خادمية
+// إضافية لأن هذه الميزة لا تستدعي أي AI/API مدفوع، والعملية بأكملها محلية داخل المتصفح.
+async function performReplan(container, dayId, reason, note) {
+  const now = Date.now();
+  if (replanInFlight) return;
+  if (now - lastReplanAt < REPLAN_COOLDOWN_MS) {
+    toast('تمهّل قليلًا قبل إعادة الترتيب مرة أخرى', 'error');
+    return;
+  }
+  replanInFlight = true;
+  lastReplanAt = now;
+
+  const btn = qs(`[data-day-id="${dayId}"] [data-day-action="replan"]`);
+  const originalLabel = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>جارٍ الترتيب...</span>'; }
+  let didReplan = false;
+
+  try {
+    // تحقّق خادمي حقيقي من أن الرحلة الحالية تحديدًا مدفوعة (trip_id + payment_status='paid'
+    // في D1) — لا نثق بأي حالة دفع محفوظة في المتصفح. بدون trip_id للرحلة الحالية، لا يمكن
+    // التحقق إطلاقًا فتُرفض الميزة (fail-closed)، وليس السماح بها.
+    const tripId = store.getTrip().id;
+    if (!tripId) {
+      toast('ابدأ رحلتك وادفع 49 ريال أولًا لاستخدام هذه الميزة', 'error');
+      navigate('/trip');
+      return;
+    }
+
+    let res;
+    try {
+      res = await fetch('/api/trips', { credentials: 'same-origin' });
+    } catch {
+      toast('تعذّر الاتصال بالخادم، حاول مرة أخرى', 'error');
+      return;
+    }
+    if (!res.ok) {
+      if (res.status === 401) toast('انتهت جلستك، سجّل الدخول من جديد', 'error');
+      else toast('تعذّر التحقق من صلاحيتك، حاول لاحقًا', 'error');
+      return;
+    }
+    const { trips } = await res.json();
+    const mine = trips.find((t) => t.id === tripId);
+    if (!mine || !mine.unlocked) {
+      toast('هذه الرحلة تحتاج دفع 49 ريال أولًا لاستخدام هذه الميزة', 'error');
+      navigate(`/pay?trip=${encodeURIComponent(tripId)}`);
+      return;
+    }
+
+    const day = store.get('days', dayId);
+    if (!day) { toast('اليوم غير موجود', 'error'); return; }
+    const activities = store.list('activities').filter((a) => a.dayId === dayId);
+
+    const patches = computeReplan(activities, reason, note);
+    if (!patches) {
+      toast('لا توجد أنشطة متبقية اليوم لإعادة ترتيبها', 'info');
+      return;
+    }
+
+    saveReplanBackup(dayId, activities.map((a) => ({ ...a })));
+    patches.forEach((p) => store.update('activities', p.id, { time: p.time, order: p.order }));
+
+    toast('تم ترتيب يومك من جديد ✨', 'success');
+    didReplan = true;
+    renderItinerary(container);
+  } catch {
+    toast('حدث خطأ أثناء إعادة الترتيب، خطتك الحالية لم تتغيّر', 'error');
+  } finally {
+    replanInFlight = false;
+    // إعادة تصيير renderItinerary عند النجاح تستبدل الشجرة بالكامل (وتُعيد الزر لحالته الطبيعية
+    // تلقائيًا) — نُعيد ضبط الزر يدويًا فقط في مسارات الفشل/التوقف المبكر حتى لا يبقى معطّلاً للأبد.
+    if (!didReplan && btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+  }
+}
+
+function undoReplan(container, dayId) {
+  const backup = getReplanBackup();
+  if (!backup || backup.dayId !== dayId) return;
+  store.list('activities').filter((a) => a.dayId === dayId).forEach((a) => store.remove('activities', a.id));
+  backup.activities.forEach((a) => store.add('activities', { ...a, dayId }));
+  clearReplanBackup();
+  toast('تمت العودة للخطة السابقة', 'success');
+  renderItinerary(container);
+}
+
 // إنشاء أيام الرحلة تلقائيًا حسب تواريخ الرحلة، مرة واحدة فقط إذا لم توجد أي أيام بعد
 function autoGenerateDays(trip) {
   if (!trip.startDate || !trip.endDate) return false;
@@ -237,6 +453,8 @@ function activityItemHtml(a, isFirst, isLast, allowReorder) {
 
 function dayCardHtml(day, activities, allowReorder) {
   const isToday = day.date === todayStr();
+  const backup = isToday ? getReplanBackup() : null;
+  const hasBackup = backup && backup.dayId === day.id;
   return `
     <div class="card mt-2" data-day-id="${day.id}">
       <div class="flex items-center justify-between">
@@ -254,6 +472,11 @@ function dayCardHtml(day, activities, allowReorder) {
         </div>
       </div>
       ${day.notes ? `<div class="text-sm text-muted mt-2">${escapeHtml(day.notes)}</div>` : ''}
+      ${isToday ? `
+      <div class="flex gap-2 mt-2">
+        <button class="btn btn-primary btn-sm" data-day-action="replan">${icon('sparkle', 15)}<span>رتّب لي اليوم من جديد</span></button>
+        ${hasBackup ? `<button class="btn btn-outline btn-sm" data-day-action="undo-replan">العودة للخطة السابقة</button>` : ''}
+      </div>` : ''}
       <div class="mt-3">
         ${activities.length ? activities.map((a, i) => activityItemHtml(a, i === 0, i === activities.length - 1, allowReorder)).join('') : `<div class="text-sm text-muted" style="text-align:center; padding:10px;">لا توجد أنشطة في هذا اليوم${itineraryPeriodFilter !== 'الكل' ? ' لهذه الفترة' : ''}</div>`}
       </div>
@@ -325,6 +548,14 @@ function renderItinerary(container) {
     }
     if (dayAction === 'edit') {
       openDayModal(container, dayId);
+      return;
+    }
+    if (dayAction === 'replan') {
+      openReplanModal(container, dayId);
+      return;
+    }
+    if (dayAction === 'undo-replan') {
+      undoReplan(container, dayId);
       return;
     }
     if (dayAction === 'delete') {
