@@ -9,13 +9,13 @@
 | **Authentica** (`api.authentica.sa`) | SMS OTP send/verify | Users cannot log in at all | `AUTHENTICA_API_KEY` (Cloudflare Pages env var) |
 | **Moyasar** | Payment invoice creation + webhook | Users cannot pay / activate subscription | `MOYASAR_SECRET_KEY`, `MOYASAR_WEBHOOK_SECRET` (Cloudflare Pages env vars) |
 
-**Incident ownership placeholders** (no real personnel are represented in this repository —
-replace with actual names/contacts before relying on this runbook):
-- **Primary on-call / incident commander**: `<TBD — assign an owner>`
-- **Cloudflare account owner**: `<TBD>`
-- **Authentica account owner**: `<TBD>`
-- **Moyasar account owner**: `<TBD>`
-- **Escalation contact**: `<TBD>`
+**Incident ownership**:
+- **Primary Incident Owner**: SmaTrips Admin
+- **Backup Incident Owner**: SmaTrips Technical Support
+
+(Per-provider account ownership — Cloudflare, Authentica, Moyasar dashboard access — should still
+be confirmed separately with whoever actually holds those credentials; not assumed to be the same
+as the incident owners above.)
 
 ## Alerting — what's implemented vs. what needs manual configuration
 
@@ -112,8 +112,9 @@ to leave in place during an app-code rollback.
 
 - Configure Cloudflare Notifications/Logpush for the alert conditions above (confirmed not
   possible from this environment — the available credential gets `403` from the Alerting API).
-- Fill in real incident-ownership contacts (placeholders below — this repo cannot know real
-  personnel names/contacts and will not invent them).
+- ~~Fill in real incident-ownership contacts~~ — **done** (Primary/Backup Incident Owner assigned
+  above); per-provider (Cloudflare/Authentica/Moyasar) account ownership still needs manual
+  confirmation separately.
 - ~~Run a real production D1 backup/export and periodic restore drill~~ — **done once, verified**
   (2026-08-30, see [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md)); repeat on the recommended cadence
   going forward, this was not a one-time close-out.
