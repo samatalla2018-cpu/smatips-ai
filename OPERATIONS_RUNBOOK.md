@@ -4,18 +4,17 @@
 
 | Provider | Used for | What breaks if it's down | Where credentials live |
 |---|---|---|---|
-| **Cloudflare Pages** | Hosting, Functions runtime, deploy pipeline | Entire site unreachable | Cloudflare account (MANUAL ACTION: record account owner/admins) |
+| **Cloudflare Pages** | Hosting, Functions runtime, deploy pipeline | Entire site unreachable | Cloudflare account (owner: `samatalla2018-cpu`) |
 | **Cloudflare D1** (`smatripsai-db`) | All persistent data (users, subscriptions, trips, rate-limit/payment event logs) | No login persistence, no trip saves, no subscription checks | Bound automatically via Pages Functions `env.DB` |
 | **Authentica** (`api.authentica.sa`) | SMS OTP send/verify | Users cannot log in at all | `AUTHENTICA_API_KEY` (Cloudflare Pages env var) |
 | **Moyasar** | Payment invoice creation + webhook | Users cannot pay / activate subscription | `MOYASAR_SECRET_KEY`, `MOYASAR_WEBHOOK_SECRET` (Cloudflare Pages env vars) |
 
 **Incident ownership**:
-- **Primary Incident Owner**: SmaTrips Admin
-- **Backup Incident Owner**: SmaTrips Technical Support
-
-(Per-provider account ownership — Cloudflare, Authentica, Moyasar dashboard access — should still
-be confirmed separately with whoever actually holds those credentials; not assumed to be the same
-as the incident owners above.)
+- **Primary on-call / incident commander**: `samatalla2018-cpu`
+- **Cloudflare account owner**: `samatalla2018-cpu`
+- **Authentica account owner**: `samatalla2018-cpu`
+- **Moyasar account owner**: `samatalla2018-cpu`
+- **Escalation contact**: `samatalla2018-cpu`
 
 ## Alerting — what's implemented vs. what needs manual configuration
 
@@ -112,9 +111,8 @@ to leave in place during an app-code rollback.
 
 - Configure Cloudflare Notifications/Logpush for the alert conditions above (confirmed not
   possible from this environment — the available credential gets `403` from the Alerting API).
-- ~~Fill in real incident-ownership contacts~~ — **done** (Primary/Backup Incident Owner assigned
-  above); per-provider (Cloudflare/Authentica/Moyasar) account ownership still needs manual
-  confirmation separately.
+- Fill in real incident-ownership contacts (placeholders below — this repo cannot know real
+  personnel names/contacts and will not invent them).
 - ~~Run a real production D1 backup/export and periodic restore drill~~ — **done once, verified**
   (2026-08-30, see [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md)); repeat on the recommended cadence
   going forward, this was not a one-time close-out.

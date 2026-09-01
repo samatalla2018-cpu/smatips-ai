@@ -161,8 +161,9 @@ this session. All test commands below were actually executed; output is summariz
   outbound provider call to 8s with no retry loops anywhere in the codebase (confirmed by reading
   every `fetch()` call site); trip-file write size cap (2MB).
 - **Documented**: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md) covers all 8 required incident
-  scenarios, a provider ownership table, and assigned incident ownership (Primary: SmaTrips Admin,
-  Backup: SmaTrips Technical Support).
+  scenarios, a provider ownership table, and incident ownership (all roles — primary incident
+  owner, Cloudflare/Authentica/Moyasar account owner, escalation contact — assigned to
+  `samatalla2018-cpu`).
 - **D1 recovery**: tested locally end-to-end (see Condition 4 / `DATA_AND_RECOVERY.md`).
   **MANUAL ACTION REQUIRED** for a real production drill (needs Cloudflare account access).
 - **MANUAL ACTION REQUIRED**: configure actual Cloudflare Notifications/Logpush destinations for
