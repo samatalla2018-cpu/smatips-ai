@@ -62,8 +62,8 @@ Cloudflare account configuration step, not something achievable purely from this
 1. Check `payment_webhook_provider_verify_failed` logs — if present, Moyasar's invoice-lookup API is failing (network/credentials), not a logic bug.
 2. Verify `MOYASAR_SECRET_KEY` / `MOYASAR_WEBHOOK_SECRET` are current (Moyasar dashboard — MANUAL ACTION).
 3. Confirm the webhook URL configured in the Moyasar dashboard still points at `/api/payment/webhook?token=<MOYASAR_WEBHOOK_SECRET>` with the current secret.
-4. For a specific stuck customer: check `subscriptions.status` for their phone via `wrangler d1 execute smatripsai-db --remote --command "SELECT * FROM subscriptions WHERE phone='<phone>'"`, and `payment_events` for their invoice id to see what Moyasar actually reported.
-5. Never manually flip a subscription to `active` without confirming the invoice was genuinely paid via Moyasar's own dashboard — that would defeat the Priority 3 server-side verification fix.
+4. Payment is per-trip now (SAR 49 per `trip_id`, not a site-wide subscription — see `migrations/0003_trip_payments.sql`). For a specific stuck customer/trip: check `trips.payment_status` for their `trip_id` via `wrangler d1 execute smatripsai-db --remote --command "SELECT id, phone, payment_status, moyasar_invoice_id FROM trips WHERE id='<trip_id>'"`, and `payment_events` for the invoice id to see what Moyasar actually reported. (`subscriptions.status` only matters for legacy pre-conversion invoices that never carried a `trip_id`.)
+5. Never manually flip `trips.payment_status` (or a legacy `subscriptions.status`) to `paid`/`active` without confirming the invoice was genuinely paid via Moyasar's own dashboard — that would defeat the Priority 3 server-side verification fix.
 
 ### 4. D1/database failure
 1. Symptoms: 503s from `_middleware.js`, `trips/*`, `subscription/status.js` (these now fail closed on DB errors rather than granting access — confirm this is what's happening, not a different bug).
@@ -107,17 +107,28 @@ to leave in place during an app-code rollback.
 | No unbounded retries anywhere | Reviewed — no retry loops exist in the codebase (all provider calls are single-attempt with a timeout, which is itself a safe default — no risk of a retry storm) | — |
 | AI assistant external API calls | None exist yet — [js/pages/assistant.js](js/pages/assistant.js) `requestAssistantReply` is a local stub (`setTimeout` + canned message), verified by reading the file. No cost-control action needed until a real backend is wired up — **flag this runbook for an update when that happens.** | — |
 
-## What still requires manual action (summary)
+## What still requires manual action (summary — updated 2026-09-02)
 
-- Configure Cloudflare Notifications/Logpush for the alert conditions above (confirmed not
-  possible from this environment — the available credential gets `403` from the Alerting API).
-- Fill in real incident-ownership contacts (placeholders below — this repo cannot know real
-  personnel names/contacts and will not invent them).
+- Configure Cloudflare Notifications/Logpush for the alert conditions above — still not
+  achievable from this environment (no verified read/write access to the Alerting API was
+  available in this session either); requires someone with full Cloudflare account access.
+- Incident-ownership contacts are filled in above with the repository owner's own account
+  (`samatalla2018-cpu`) — not an invented name. Update if a dedicated on-call rotation is set up later.
 - ~~Run a real production D1 backup/export and periodic restore drill~~ — **done once, verified**
   (2026-08-30, see [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md)); repeat on the recommended cadence
   going forward, this was not a one-time close-out.
-- Confirm preview vs. production environment variable separation in the Cloudflare dashboard.
-- Fix `.github/workflows/ci.yml` (Priority 5) — still failing as an invalid workflow file as of
-  this audit (confirmed via `gh api .../actions/runs`); out of scope to fix here since it's a
-  Priority 5 item, but it's also the most viable in-repo "deployment failure" detection
-  mechanism once working, so it's worth closing before relying on it for Priority 6 alerting.
+- ~~Confirm preview vs. production environment variable separation~~ — **CONFIRMED** (2026-09-02):
+  `wrangler pages secret list` shows Production has all 6 required secrets and Preview has none at
+  all — see [DEPLOYMENT_AND_ROLLBACK.md](DEPLOYMENT_AND_ROLLBACK.md) for the exact evidence.
+- ~~Fix `.github/workflows/ci.yml`~~ — **DONE**. CI is live and green (`gh run list` shows recent
+  `main` runs as `success`); do not reopen this item — see
+  [DEPLOYMENT_AND_ROLLBACK.md](DEPLOYMENT_AND_ROLLBACK.md) "CI status" section.
+- **Still open**: a real end-to-end Moyasar payment test (create a real invoice, pay it, confirm
+  the webhook activates the correct `trip_id`) has not been performed. A prior attempt reportedly
+  returned "Invalid authorization credentials" from Moyasar; `functions/api/payment/create.js`
+  already defends against the most common cause (trailing whitespace/newline in the secret key,
+  via `.trim()`), but this has not been re-tested against the live Moyasar account from this
+  environment (no `MOYASAR_SECRET_KEY` value is available here, and a real payment must not be
+  initiated without the account owner's direct involvement). Action: the account owner should
+  confirm `MOYASAR_SECRET_KEY`/`MOYASAR_WEBHOOK_SECRET` are correct in the Moyasar dashboard and
+  Cloudflare Pages production env vars, then run one real trip payment end-to-end.

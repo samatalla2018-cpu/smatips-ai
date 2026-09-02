@@ -48,14 +48,28 @@ This is already structurally true: Cloudflare Pages' git integration only ever d
 pushed to the connected branch. There is no local `wrangler deploy` script in this repo, so there
 is no path for a developer to push straight to production from their machine.
 
-### Production vs. preview/staging separation
+### Production vs. preview/staging separation — CONFIRMED (verified 2026-09-02)
 
-**MANUAL ACTION REQUIRED** (Cloudflare Dashboard → Pages project → Settings → Environment
-variables): confirm that `AUTHENTICA_API_KEY`, `SESSION_SECRET`, `MOYASAR_SECRET_KEY`,
-`MOYASAR_WEBHOOK_SECRET` are set **separately** for Production and Preview, and that Preview does
-not silently inherit Production secrets (preview URLs are `*.smatripsai.pages.dev`-style and are
-reachable by anyone with the link — they must not carry production payment/OTP credentials for a
-real customer-facing Authentica/Moyasar account, or use test-mode credentials there instead).
+Re-verified directly against the live Cloudflare Pages project (read-only, no settings changed):
+
+```
+$ wrangler pages secret list --project-name=smatripsai
+production: ALLOWED_PHONE, AUTHENTICA_API_KEY, MOYASAR_SECRET_KEY,
+            MOYASAR_WEBHOOK_SECRET, SESSION_SECRET, SUBSCRIPTION_PRICE_SAR
+            (all 6 present, values encrypted/never printed)
+
+$ wrangler pages secret list --project-name=smatripsai --env=preview
+preview:    (no secrets — empty list)
+```
+
+Preview deployments have **zero** secrets bound — they cannot leak `AUTHENTICA_API_KEY`,
+`SESSION_SECRET`, `MOYASAR_SECRET_KEY`, or `MOYASAR_WEBHOOK_SECRET` because none of those exist in
+the Preview environment at all. This is the strongest possible form of separation (not just
+"different values" but "not present"). One consequence: a Preview deployment cannot exercise the
+OTP/payment flow end-to-end today (calls relying on those env vars will fail closed with a 500, not
+silently use production credentials) — this is safe behavior, not a bug, but note it if a future
+task wants a working Preview-based staging test of OTP/payment; that would require its own
+test-mode credentials added to the Preview environment deliberately.
 
 ## Environment variable validation before deploy
 
@@ -101,29 +115,42 @@ Database compatibility during rollback:
 - If a future migration is ever destructive, the rollback plan must include a tested D1 restore
   procedure — see [DATA_AND_RECOVERY.md](DATA_AND_RECOVERY.md).
 
-## CI status — NOT currently live (verified, root cause confirmed)
+## CI status — LIVE and green (re-verified 2026-09-02)
 
-`.github/workflows/ci.yml` does **not** exist in this repository right now — verified directly
-(`git ls-files .github/` returns nothing). It was written once before (commit `439e652`) and
-removed again in the very next commit (`d53bb1e`) for a confirmed, reproducible reason: **GitHub
-rejects any push that creates or modifies a file under `.github/workflows/` unless the pushing
-credential has the separate `workflow` OAuth scope.** The credential available in this environment
-does not have it — confirmed via `gh auth status` (scopes: `gist, read:org, repo` — no `workflow`).
-This is not a one-off; the same restriction was hit and documented twice now, independently.
+`.github/workflows/ci.yml` exists and runs on every push/PR to `main` (`gh workflow list` → `CI
+active`). The credential used for `git push` now carries the `workflow` OAuth scope (confirmed via
+`gh auth status`: `gist, read:org, repo, workflow`), so the scope restriction described in the
+superseded section below no longer blocks committing workflow files.
 
-**This means: there is currently no automated CI gate on this repository.** Merges to `main` are
-not blocked by test failures. Production deployment traceability (source commit -> deployed
-artifact) does **not** depend on CI and remains fully intact regardless (see "Traceability" above,
-and the live-verified evidence in the Priority 5 audit) — but the "tests must pass before promoting"
-control described in the release flow above is currently a manual discipline (`npm test` before
-pushing), not an enforced one.
+Re-verified directly against GitHub, not assumed:
+- `gh run list --branch main` shows the most recent runs on `main` as `completed success`,
+  including the run for the merge that brought this branch's work into `main`
+  (`Merge pull request #2 from samatalla2018-cpu/fix-otp-session-restore` → `success`).
+- `npm test` (55/55) and `npm run db:migrate:check` (no drift) — the same two steps the workflow
+  runs — were re-executed locally during this audit and passed.
 
-**MANUAL ACTION REQUIRED to close this gap** — either:
-1. Add the file below directly via the GitHub web UI (repo -> Actions tab -> "set up a workflow
-   yourself", or Add file -> Create new file -> path `.github/workflows/ci.yml`), which is not
-   subject to the OAuth scope restriction since it isn't a `git push`, or
-2. Grant the `workflow` scope to whatever token/credential this environment uses for `git push`,
-   after which the file below can be committed and pushed normally.
+**This means: `main` currently has a real, working CI gate** (tests + schema-drift check on every
+push/PR). Do not remove or "fix" `.github/workflows/ci.yml` based on the historical account below —
+it now reflects a resolved, working state.
+
+<details>
+<summary>Historical record (superseded) — why CI was missing/failing earlier, kept for context only</summary>
+
+`.github/workflows/ci.yml` did not exist in the repository as of the Priority 5 audit — verified
+directly (`git ls-files .github/` returned nothing at the time). It was written once before
+(commit `439e652`) and removed again in the very next commit (`d53bb1e`) because the pushing
+credential available in that session lacked the `workflow` OAuth scope GitHub requires to create or
+modify files under `.github/workflows/`. After the scope was granted, the workflow file was added
+back, then went through a few failing iterations (wrong YAML indentation, a stale script name
+`d1:migrate:check` that didn't match `package.json`'s actual `db:migrate:check` script, and a
+Node-version mismatch against `package.json`'s `engines` field) before being corrected — see
+`gh run list` history for the exact failing → passing sequence (commits `Fix CI workflow YAML
+indentation`, `Fix CI: run tests on Node 24 to match package.json engines`, `Fix ci.yml: correct
+YAML indentation and script name`). None of that history is still an open issue.
+
+</details>
+
+The workflow content, for reference (do not edit without a real reason — it is currently green):
 
 ```yaml
 name: CI
@@ -151,7 +178,7 @@ jobs:
       - name: Run automated tests (auth, OTP, authorization, payment)
         run: npm test
 
-      - name: Schema-drift check (migrations vs schema.sql)
+      - name: Schema drift check (migrations vs schema.sql)
         run: npm run db:migrate:check
 ```
 
