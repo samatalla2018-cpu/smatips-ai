@@ -107,6 +107,22 @@ img { max-width: 100%; display: block; }
 
 .icon { flex-shrink: 0; }
 
+/* -------- إمكانية الوصول: تركيز لوحة المفاتيح + تقليل الحركة -------- */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* =================== الهيكل العام =================== */
 .app-shell {
   display: grid;
@@ -209,6 +225,7 @@ img { max-width: 100%; display: block; }
   transition: background .15s, border-color .15s;
 }
 .icon-btn:hover { background: var(--surface-2); }
+.icon-btn:active { transform: scale(.94); }
 .icon-btn.menu-btn { display: none; }
 @media (max-width: 900px) { .icon-btn.menu-btn { display: flex; } }
 
@@ -382,6 +399,24 @@ img { max-width: 100%; display: block; }
 .btn-sm { height: 34px; padding: 0 13px; font-size: 13px; border-radius: 10px; }
 .btn-block { width: 100%; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:active:not(:disabled):not(.is-loading) { transform: translateY(1px); filter: brightness(.97); }
+
+/* حالة تحميل جاهزة لأي زر: أضِف الصنف is-loading عند بدء عملية (لا تُستخدم تلقائيًا) */
+.btn.is-loading { position: relative; color: transparent !important; pointer-events: none; }
+.btn.is-loading > * { visibility: hidden; }
+.btn.is-loading::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .4);
+  border-top-color: #fff;
+  animation: spin .7s linear infinite;
+}
+.btn-outline.is-loading::after, .btn-ghost.is-loading::after {
+  border-color: color-mix(in srgb, var(--text) 20%, transparent);
+  border-top-color: var(--text);
+}
 
 .badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -395,6 +430,7 @@ img { max-width: 100%; display: block; }
 .badge-primary { background: var(--primary-light); color: var(--primary-dark); }
 .badge-accent { background: var(--accent-light); color: #92400E; }
 .badge-success { background: var(--success-light); color: var(--success); }
+.badge-info { background: var(--info-light); color: var(--info); }
 .badge-danger { background: var(--danger-light); color: var(--danger); }
 
 .chip {
@@ -406,8 +442,10 @@ img { max-width: 100%; display: block; }
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
 }
 .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.chip:active { transform: scale(.96); }
 .chip-row { display: flex; gap: 8px; overflow-x: auto; min-width: 0; padding-bottom: 4px; scrollbar-width: none; }
 .chip-row::-webkit-scrollbar { display: none; }
 
@@ -430,8 +468,58 @@ img { max-width: 100%; display: block; }
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
+.field input::placeholder, .field textarea::placeholder { color: var(--text-faint); opacity: 1; }
+.field input:disabled, .field select:disabled, .field textarea:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  background: var(--surface-2);
+}
+
+/* سهم موحّد لكل القوائم المنسدلة (بدل سهم المتصفح الافتراضي غير المتناسق بين المتصفحات) */
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236D6488' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 14px center;
+  background-size: 16px;
+  padding-inline-end: 40px;
+}
+.field select::-ms-expand { display: none; }
+@media (prefers-color-scheme: dark) {
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23B7ACD9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  }
+}
+
+/* أيقونة التقويم/الساعة الافتراضية في المتصفح تبقى داكنة اللون حتى في الوضع الليلي — نعكسها لتبقى مرئية */
+@media (prefers-color-scheme: dark) {
+  .field input[type="date"]::-webkit-calendar-picker-indicator,
+  .field input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.7);
+  }
+}
+
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+/* حالات نجاح/خطأ جاهزة لأي حقل (أضِف الصنف على .field عند الحاجة لاحقًا) */
+.field.has-error input, .field.has-error select, .field.has-error textarea {
+  border-color: var(--danger);
+}
+.field.has-error input:focus, .field.has-error select:focus, .field.has-error textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent);
+}
+.field.has-success input, .field.has-success select, .field.has-success textarea {
+  border-color: var(--success);
+}
+.field.has-success input:focus, .field.has-success select:focus, .field.has-success textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
+}
+.field-msg { font-size: 12.5px; font-weight: 700; margin-top: -2px; }
+.field-msg.error { color: var(--danger); }
+.field-msg.success { color: var(--success); }
 
 .empty-state {
   display: flex;
@@ -738,6 +826,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .badge { padding: 3px 9px; font-size: 11px; }
 
   .field input, .field select, .field textarea { height: 42px; font-size: 14px; padding: 0 12px; }
+  .field select { padding-inline-end: 36px; background-position: left 12px center; background-size: 14px; }
   .field label { font-size: 12.5px; }
   .field-row { gap: 10px; }
 

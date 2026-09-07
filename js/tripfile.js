@@ -113,7 +113,7 @@ async function downloadTripFile(id, title) {
   const res = await fetch(`/api/trips/${id}`, { credentials: 'same-origin' });
   if (!res.ok) {
     if (res.status === 403) {
-      toast('هذه الرحلة تحتاج دفع 49 ريال أولًا', 'error');
+      toast('هذه الرحلة تحتاج دفع 69 ريال أولًا', 'error');
       navigate(`/pay?trip=${encodeURIComponent(id)}`);
     } else {
       toast('تعذّر تنزيل الملف', 'error');

@@ -1,4 +1,4 @@
-// صفحة "ادفع لفتح هذه الرحلة" — تعرض السعر (49 ريال) وتبدأ الدفع عبر Moyasar لـ trip_id محدد.
+// صفحة "ادفع لفتح هذه الرحلة" — تعرض السعر (69 ريال) وتبدأ الدفع عبر Moyasar لـ trip_id محدد.
 // الدفع هنا مرتبط بهذه الرحلة تحديدًا فقط؛ لا يفتح أي رحلة أخرى لنفس المستخدم.
 
 function payEmptyStateHtml() {
@@ -82,7 +82,7 @@ function renderPay(container) {
   const tripId = currentQuery().get('trip') || store.getTrip().id;
 
   container.innerHTML = `
-    ${pageHeader({ title: 'فتح الرحلة', desc: 'دفعة 49 ريال لكل رحلة على حدة', iconName: 'wallet' })}
+    ${pageHeader({ title: 'فتح الرحلة', desc: 'دفعة 69 ريال لكل رحلة على حدة', iconName: 'wallet' })}
     <div class="card mt-3" style="max-width:420px;margin:0 auto;padding:26px 22px;" id="pay-card">
       <div class="flex items-center gap-2 text-sm text-muted" style="justify-content:center;padding:16px 0;"><span class="spinner"></span><span>جارٍ التحميل...</span></div>
     </div>

@@ -180,7 +180,7 @@ async function initSubscribeButtons() {
   }
 
   btns.forEach((btn) => {
-    btn.textContent = 'ادفع 49 ريال لفتح رحلتك';
+    btn.textContent = 'ادفع 69 ريال لفتح رحلتك';
     btn.style.display = '';
     btn.addEventListener('click', () => navigate(`/pay?trip=${encodeURIComponent(tripId)}`));
   });

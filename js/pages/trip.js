@@ -2,7 +2,7 @@
 
 // بطاقة حالة الرحلة: قبل وجود trip_id تعرض زر "ابدأ رحلتك" (يحجز trip_id من السيرفر)، وبعده
 // تعرض حالة الدفع الفعلية لهذه الرحلة تحديدًا (لا نثق بأي حالة محفوظة محليًا — نتحقق من
-// GET /api/trips في كل مرة). الدفع بقيمة 49 ريال يفتح هذه الرحلة فقط، وليس أي رحلة أخرى.
+// GET /api/trips في كل مرة). الدفع بقيمة 69 ريال يفتح هذه الرحلة فقط، وليس أي رحلة أخرى.
 function tripStatusCardHtml(trip) {
   if (!trip.id) {
     return `
@@ -51,10 +51,10 @@ async function refreshTripStatusCard() {
           <div class="page-header-icon" style="width:40px;height:40px;border-radius:12px;">${icon('wallet', 18)}</div>
           <div style="flex:1;">
             <div class="item-title">هذه الرحلة غير مدفوعة بعد</div>
-            <div class="text-sm text-muted">ادفع 49 ريال لفتح هذه الرحلة تحديدًا (تنزيل الملف + "رتّب لي اليوم من جديد")</div>
+            <div class="text-sm text-muted">ادفع 69 ريال لفتح هذه الرحلة تحديدًا (تنزيل الملف + "رتّب لي اليوم من جديد")</div>
           </div>
         </div>
-        <a class="btn btn-primary btn-block mt-3" href="#/pay?trip=${encodeURIComponent(trip.id)}">${icon('wallet', 16)}<span>ادفع 49 ريال</span></a>`;
+        <a class="btn btn-primary btn-block mt-3" href="#/pay?trip=${encodeURIComponent(trip.id)}">${icon('wallet', 16)}<span>ادفع 69 ريال</span></a>`;
     }
   } catch {
     card.innerHTML = `<div class="text-sm text-muted">تعذّر التحقق من حالة الدفع، حدّث الصفحة لاحقًا.</div>`;

@@ -170,7 +170,7 @@ async function performReplan(container, dayId, reason, note) {
     // التحقق إطلاقًا فتُرفض الميزة (fail-closed)، وليس السماح بها.
     const tripId = store.getTrip().id;
     if (!tripId) {
-      toast('ابدأ رحلتك وادفع 49 ريال أولًا لاستخدام هذه الميزة', 'error');
+      toast('ابدأ رحلتك وادفع 69 ريال أولًا لاستخدام هذه الميزة', 'error');
       navigate('/trip');
       return;
     }
@@ -190,7 +190,7 @@ async function performReplan(container, dayId, reason, note) {
     const { trips } = await res.json();
     const mine = trips.find((t) => t.id === tripId);
     if (!mine || !mine.unlocked) {
-      toast('هذه الرحلة تحتاج دفع 49 ريال أولًا لاستخدام هذه الميزة', 'error');
+      toast('هذه الرحلة تحتاج دفع 69 ريال أولًا لاستخدام هذه الميزة', 'error');
       navigate(`/pay?trip=${encodeURIComponent(tripId)}`);
       return;
     }
