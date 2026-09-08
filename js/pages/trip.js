@@ -1,9 +1,9 @@
 // صفحة "رحلتي" — قبل trip_id: نموذج بدء الرحلة. بعد trip_id: صفحة تفاصيل رحلة (Hero + إحصاءات
 // + معاينة يومية)، والنموذج القابل للتعديل يبقى كاملًا وفعّالًا أسفلها داخل قسم قابل للطي.
 
-// بطاقة حالة الرحلة قبل وجود trip_id: زر "أنشئ خطتي" (يحجز trip_id من السيرفر) — بلا أي طلب دفع
-// في هذه اللحظة؛ الدفع لا يظهر إلا لاحقًا في بطاقة المعاينة/Paywall. بعد trip_id تُبنى الحالة من
-// GET /api/trips دومًا (لا نثق بأي حالة محفوظة محليًا) عبر refreshTripStatusCard.
+// بطاقة حالة الرحلة قبل وجود trip_id: زر "أنشئ خطتي" — لا يتصل بالسيرفر إطلاقًا في هذه اللحظة،
+// فقط يحفظ بيانات النموذج محليًا ويعرض معاينة مجانية فورية (Guest Preview بلا تسجيل دخول). حجز
+// trip_id الحقيقي من السيرفر يحدث لاحقًا فقط عند "أكمل رحلتي" (renderGuestPreview أدناه).
 function tripStatusCardHtml(trip) {
   if (!trip.id) {
     return `
@@ -12,10 +12,10 @@ function tripStatusCardHtml(trip) {
           <div class="page-header-icon" style="width:40px;height:40px;border-radius:12px;">${icon('sparkle', 18)}</div>
           <div style="flex:1;">
             <div class="item-title">جهّز بيانات رحلتك بالأسفل ثم أنشئ خطتك</div>
-            <div class="text-sm text-muted">تقدر تبني جدولك وتشوف معاينة حقيقية لرحلتك قبل أي دفع</div>
+            <div class="text-sm text-muted">شاهد معاينة حقيقية لرحلتك فورًا — بلا تسجيل دخول وبلا أي دفع</div>
           </div>
         </div>
-        <button class="btn btn-primary btn-block mt-3" id="start-trip-btn">${icon('sparkle', 16)}<span>أنشئ خطتي</span></button>
+        <button class="btn btn-pill btn-accent btn-block mt-3" id="start-trip-btn">${icon('sparkle', 16)}<span>أنشئ خطتي</span></button>
       </div>`;
   }
   return '';
@@ -181,14 +181,25 @@ function tripPreviewSectionHtml(trip) {
       ${lockedDaysListHtml(days.slice(1))}`;
   }
 
+  return `${summaryHtml}${day1Section}<div id="trip-mini-weather"></div>${tripMiniPlacesHtml()}${tripMiniTasksPackingHtml()}`;
+}
+
+// نفس محتوى المعاينة المجانية بالضبط، لكن مع بطاقة الدفع الحقيقية (بعد وجود trip_id فعلي)
+function tripPreviewWithPaywallHtml(trip) {
+  return `${tripPreviewSectionHtml(trip)}${paywallCardHtml(trip.id)}`;
+}
+
+// بطاقة CTA لمرحلة "قبل تسجيل الدخول": نفس هوية بطاقة الدفع (paywall-card) بصريًا لكن بلا سعر أو
+// قائمة فتح — السعر وقائمة الفتح الكاملة تظهران فقط في بطاقة الدفع الحقيقية بعد OTP، تمامًا كما
+// طُلب ("لا أريد إحساس ادفع قبل أن تعرف ماذا ستحصل عليه").
+function guestCompleteCtaHtml() {
   return `
-    ${summaryHtml}
-    ${day1Section}
-    <div id="trip-mini-weather"></div>
-    ${tripMiniPlacesHtml()}
-    ${tripMiniTasksPackingHtml()}
-    ${paywallCardHtml(trip.id)}
-  `;
+    <div class="paywall-card" data-animate>
+      <div class="paywall-icon">${icon('sparkle', 24)}</div>
+      <h3>أعجبتك خطتك؟</h3>
+      <p>هذه معاينة مجانية لرحلتك — أكمل الآن لتفتحها بالكامل بكل أدوات SmaTrips AI</p>
+      <button type="button" class="btn btn-pill btn-accent btn-block mt-2" id="complete-trip-btn">${icon('navigation', 18)}<span>أكمل رحلتي</span></button>
+    </div>`;
 }
 
 // يُستدعى بعد معرفة حالة الدفع الحقيقية (access): إن كانت الرحلة مفتوحة فعليًا يُخفي المعاينة/
@@ -241,7 +252,7 @@ function renderTripPreviewSection(access) {
     return;
   }
   const trip = store.getTrip();
-  el.innerHTML = tripPreviewSectionHtml(trip);
+  el.innerHTML = tripPreviewWithPaywallHtml(trip);
   if (window.initAnimate) initAnimate(el);
   loadTripMiniWeather(trip);
 }
@@ -448,8 +459,102 @@ function wireTripForm(container) {
   return { saveTripFormData };
 }
 
+// ---------- معاينة الضيف (Guest Preview) — بعد "أنشئ خطتي"، قبل أي تسجيل دخول ----------
+// بيانات محلية بحتة (localStorage)، بلا trip_id حقيقي وبلا أي اتصال بالسيرفر حتى يضغط المستخدم
+// "أكمل رحلتي" أدناه. تعرض بالضبط نفس مكوّنات المعاينة المستخدمة لاحقًا بعد trip_id (الهيرو
+// الديناميكي، الملخّص الذكي، اليوم الأول، الطقس، الأماكن، المهام/الأغراض) حتى تكون التجربة متطابقة.
+function renderGuestPreview(container, trip) {
+  container.innerHTML = `
+    ${tripDetailsHeroHtml(trip)}
+    ${tripStatBarHtml(trip)}
+    <a href="#" id="edit-guest-trip-link" class="text-sm" style="display:inline-flex; align-items:center; gap:6px; margin:14px 0 0; color:var(--primary-dark); font-weight:700;">${icon('edit', 14)}<span>تعديل بيانات الرحلة</span></a>
+    <div class="mt-3" id="guest-preview-section">
+      ${tripPreviewSectionHtml(trip)}
+      ${guestCompleteCtaHtml()}
+    </div>
+  `;
+  if (window.initAnimate) initAnimate(container);
+  loadTripMiniWeather(trip);
+
+  qs('#edit-guest-trip-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    store.updateTrip({ previewReady: false });
+    renderTrip(container);
+  });
+
+  qs('#complete-trip-btn').addEventListener('click', () => completeTripFlow(container));
+}
+
+// يحاول حجز trip_id حقيقي من السيرفر بعنوان الرحلة المحلي الحالي — يُستدعى مرتين محتملتين: مرة
+// أولى (قد تفشل بـ401 لزائر غير مسجَّل)، ومرة ثانية تلقائيًا فور نجاح OTP بنفس البيانات المحلية.
+async function createTripOnServer() {
+  const res = await fetch('/api/trips', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: store.getTrip().title || 'رحلتي' }),
+  });
+  if (res.status === 401) return { needsAuth: true };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.trip) return { ok: false, error: data.error };
+  return { ok: true, trip: data.trip };
+}
+
+// "أكمل رحلتي": يحجز trip_id مباشرة إن كانت هناك جلسة صالحة أصلًا، وإلا يفتح خطوة OTP داخل نفس
+// الصفحة (js/otp.js) ثم يعيد المحاولة تلقائيًا فور نجاحها — بلا أي إعادة تحميل، فبيانات الرحلة
+// المحلية (التي بُنيت منها هذه المعاينة) لا تُفقد أبدًا. بعد نجاح الحجز تتحول الصفحة تلقائيًا
+// لحالة trip_id الحقيقية أدناه في renderTrip، التي تعرض بطاقة الدفع (69 ريال) كما هي دون تغيير.
+async function completeTripFlow(container) {
+  const btn = qs('#complete-trip-btn');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = `<span class="spinner"></span><span>جارٍ التحقق...</span>`;
+
+  let result;
+  try {
+    result = await createTripOnServer();
+  } catch {
+    result = { ok: false, error: 'تعذّر الاتصال بالخادم' };
+  }
+
+  if (result.needsAuth) {
+    btn.disabled = false; btn.innerHTML = originalHtml;
+    openOtpModal({
+      onVerified: async () => {
+        let retry;
+        try {
+          retry = await createTripOnServer();
+        } catch {
+          retry = { ok: false, error: 'تعذّر الاتصال بالخادم' };
+        }
+        if (!retry.ok) {
+          toast(retry.error || 'تعذّر إنشاء الرحلة', 'error');
+          return;
+        }
+        store.updateTrip({ id: retry.trip.id, previewReady: false });
+        toast('تم فتح رحلتك — أكملها الآن', 'success');
+        renderTrip(container);
+      },
+    });
+    return;
+  }
+
+  if (!result.ok) {
+    toast(result.error || 'تعذّر إنشاء الرحلة', 'error');
+    btn.disabled = false; btn.innerHTML = originalHtml;
+    return;
+  }
+
+  store.updateTrip({ id: result.trip.id, previewReady: false });
+  toast('تم إنشاء خطتك', 'success');
+  renderTrip(container);
+}
+
 function renderTrip(container) {
   const trip = store.getTrip();
+
+  if (!trip.id && trip.previewReady) {
+    renderGuestPreview(container, trip);
+    return;
+  }
 
   if (!trip.id) {
     container.innerHTML = `
@@ -457,52 +562,23 @@ function renderTrip(container) {
       ${pageHeader({ title: 'بيانات الرحلة', desc: 'هذه البيانات تُستخدم في كل أنحاء الموقع', iconName: 'passport' })}
       ${tripStatusCardHtml(trip)}
       ${tripFormHtml(trip)}
-      <div class="section-title-row"><h2>الخطوة التالية</h2></div>
-      <div class="grid grid-2">
-        <a class="section-card-link" href="#/itinerary">
-          <div class="section-card-icon" style="background:var(--info-light); color:var(--info);">${icon('calendar', 20)}</div>
-          <div>
-            <div class="section-card-title">ابنِ جدول رحلتك</div>
-            <div class="section-card-sub">وزّع الأنشطة على أيام رحلتك</div>
-          </div>
-        </a>
-        <a class="section-card-link" href="#/packing">
-          <div class="section-card-icon" style="background:var(--accent-light); color:var(--accent-dark);">${icon('bag', 20)}</div>
-          <div>
-            <div class="section-card-title">جهّز قائمة أغراضك</div>
-            <div class="section-card-sub">لا تنسَ أي شيء مهم</div>
-          </div>
-        </a>
-      </div>
     `;
 
     const { saveTripFormData } = wireTripForm(container);
 
     const startBtn = qs('#start-trip-btn');
-    startBtn.addEventListener('click', async () => {
-      startBtn.disabled = true; startBtn.innerHTML = '<span>جارٍ الإنشاء...</span>';
-      // نحفظ بيانات النموذج أولًا (الوجهة، التواريخ...) حتى تظهر خطة حقيقية في المعاينة فورًا
-      // بعد الإنشاء، بدل الاعتماد على أن يضغط المستخدم "حفظ البيانات" في خطوة منفصلة.
+    startBtn.addEventListener('click', () => {
+      // لا اتصال بالسيرفر هنا إطلاقًا — فقط حفظ محلي وعرض المعاينة المجانية فورًا (Guest Preview).
       saveTripFormData();
-      try {
-        const res = await fetch('/api/trips', {
-          method: 'POST', credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: store.getTrip().title || 'رحلتي' }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.trip) {
-          toast(data.error || 'تعذّر إنشاء الرحلة', 'error');
-          startBtn.disabled = false; startBtn.innerHTML = `${icon('sparkle', 16)}<span>أنشئ خطتي</span>`;
-          return;
-        }
-        store.updateTrip({ id: data.trip.id });
-        toast('تم إنشاء خطتك — هذي معاينتها', 'success');
-        renderTrip(container);
-      } catch {
-        toast('تعذّر الاتصال بالخادم', 'error');
-        startBtn.disabled = false; startBtn.innerHTML = `${icon('sparkle', 16)}<span>أنشئ خطتي</span>`;
+      const t = store.getTrip();
+      if (!t.city && !t.country) {
+        toast('أدخل وجهتك (الدولة أو المدينة) على الأقل أولًا', 'error');
+        return;
       }
+      if (typeof autoGenerateDays === 'function') autoGenerateDays(t);
+      store.updateTrip({ previewReady: true });
+      toast('هذه معاينة رحلتك ✨', 'success');
+      renderTrip(container);
     });
     return;
   }

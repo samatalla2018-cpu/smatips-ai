@@ -35,10 +35,10 @@
   --lavender-dark: #7A6FD6;
   --lavender-light: #EFEDFC;
 
-  /* Warm Sand — لمسة دافئة (تقييمات، تمييز بسيط) بلا إفراط */
-  --accent: #E0A868;
-  --accent-dark: #C2833E;
-  --accent-light: #FBF0DF;
+  /* Orange Accent — لون الدعوة الرئيسية للعمل (CTA)، تباين قوي مع الفيروزي/الأزرق، Premium لا Neon */
+  --accent: #FF8A5B;
+  --accent-dark: #E86A3C;
+  --accent-light: #FFE9DE;
 
   --danger: #D63A56;
   --danger-light: #FBEAEE;
@@ -94,9 +94,9 @@
     --lavender-dark: #9C93E8;
     --lavender-light: #221F3E;
 
-    --accent: #EAC08C;
-    --accent-dark: #E0A868;
-    --accent-light: #362A17;
+    --accent: #FF9D73;
+    --accent-dark: #FF8A5B;
+    --accent-light: #3A2417;
 
     --danger: #F17187;
     --danger-light: #3A1620;
@@ -116,6 +116,9 @@
 * { box-sizing: border-box; }
 html, body { padding: 0; margin: 0; }
 html { direction: rtl; overflow-x: hidden; width: 100%; }
+/* يضمن أن سمة hidden تُخفي العنصر فعليًا حتى لو كان يحمل صنفًا يضبط display صراحةً
+   (مثل .field أو .btn) — بدون هذا القاعدة تبقى بعض العناصر ظاهرة رغم hidden. */
+[hidden] { display: none !important; }
 
 body {
   font-family: var(--font-ar);
@@ -1246,18 +1249,20 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 /* -------- زر واتساب العائم -------- */
 .whatsapp-float {
   position: fixed;
-  left: 16px;
-  bottom: calc(var(--bottomnav-h) + 16px);
-  width: 52px; height: 52px;
+  left: 14px;
+  bottom: calc(var(--bottomnav-h) + 22px);
+  width: 44px; height: 44px;
   border-radius: 50%;
-  background: #25D366;
+  background: linear-gradient(135deg, #29D18C, var(--primary-dark));
   color: #fff;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 20px rgba(14, 168, 160, .28);
   z-index: 45;
-  transition: transform .2s var(--ease-out);
+  opacity: .92;
+  transition: transform .2s var(--ease-out), opacity .2s var(--ease-out), box-shadow .2s var(--ease-out);
 }
-.whatsapp-float:hover { transform: scale(1.06); }
+.whatsapp-float svg { width: 20px; height: 20px; }
+.whatsapp-float:hover { transform: scale(1.06); opacity: 1; box-shadow: 0 10px 24px rgba(14, 168, 160, .36); }
 @media (min-width: 901px) { .whatsapp-float { bottom: 20px; } }
 
 /* =================== توست =================== */

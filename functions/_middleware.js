@@ -437,19 +437,14 @@ export async function onRequest(context) {
     return next();
   }
 
-  const token = readSessionCookie(request);
-  const session = await verifySessionToken(token, env.SESSION_SECRET);
-
-  // no-store على كل صفحات الدخول الديناميكية — تمنع أي متصفح أو طبقة وسيطة من
-  // تخزين استجابة خاصة بجلسة (أو بغياب جلسة) وعرضها لاحقًا لمستخدم/جهاز آخر لم يمرّ بنفس التحقق.
-  const noStoreHeaders = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' };
-
-  if (!session) {
-    return new Response(loginHtml(), { status: 200, headers: noStoreHeaders });
-  }
-
-  // الدفع أصبح لكل رحلة (trip_id) وليس اشتراكًا عامًا يفتح الموقع كاملاً بعد تسجيل الدخول —
-  // أي جلسة صالحة تدخل SPA مباشرة لتخطيط رحلاتها؛ صلاحية كل رحلة على حدة (trip_id + payment_status)
-  // تُتحقّق داخل نقاط API الخاصة بالرحلات/الدفع (functions/_utils.js: isTripUnlocked)، وليس هنا.
+  // ملاحظة مهمة (تدفق Guest Preview): هذه البوابة عادت لا تحجب أي صفحة بعد الآن — الزائر غير
+  // المسجَّل يدخل الـSPA مباشرة (بلا OTP) ليبني رحلته ويرى معاينتها المجانية محليًا أولًا، تمامًا
+  // كما طُلب صراحة. تسجيل الدخول (OTP) أصبح خطوة داخل الـSPA نفسها (js/otp.js) تُستدعى فقط عندما
+  // يضغط المستخدم "أكمل رحلتي" — لا تُغيَّر آلية التحقق نفسها (send-otp/verify-otp/createSessionToken)
+  // إطلاقًا، فقط مكان استدعائها في الواجهة. الحماية الفعلية للبيانات تبقى كما هي تمامًا: كل نقطة
+  // API حسّاسة (POST /api/trips، GET /api/trips، الدفع...) تتحقق من الجلسة بنفسها بشكل مستقل هنا
+  // (انظر functions/api/trips/index.js وغيره) — فزائر بلا جلسة صالحة لا يستطيع إنشاء رحلة حقيقية
+  // أو رؤية بيانات رحلة أخرى مهما فعل في الواجهة. loginHtml() أدناه بقيت كما هي دون أي تعديل ولم
+  // تُحذف (تقليل حجم التغيير في هذا الملف الحسّاس)، فقط لم تعد تُستدعى تلقائيًا من هنا.
   return next();
 }
