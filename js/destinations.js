@@ -180,8 +180,8 @@ const REGION_THEMES = {
 const FALLBACK_DESTINATION_THEME = {
   label: '',
   mood: 'رحلتك القادمة تبدأ من هنا',
-  heroImage: 'https://images.unsplash.com/photo-1586500036706-41963de24d8b?q=80&w=1200&auto=format&fit=crop',
-  cardImage: 'https://images.unsplash.com/photo-1586500036706-41963de24d8b?q=80&w=480&auto=format&fit=crop',
+  heroImage: 'https://images.unsplash.com/photo-1536851452588-6f2f913bc1f1?q=80&w=1200&auto=format&fit=crop',
+  cardImage: 'https://images.unsplash.com/photo-1536851452588-6f2f913bc1f1?q=80&w=480&auto=format&fit=crop',
   tint: '#0F766E',
   isFallback: true,
 };

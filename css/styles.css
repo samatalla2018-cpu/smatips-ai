@@ -665,7 +665,10 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     linear-gradient(100deg, color-mix(in srgb, var(--navy) 24%, transparent) 0%, transparent 50%);
 }
 /* حالة احتياطية (بلا وجهة محدَّدة بعد): نفس تدرّج الشفافية أعلاه بالضبط حتى تبقى صورة الخلفية
-   ظاهرة بوضوح تحته (خلل سابق كان يجعل هذا التدرّج معتمًا بالكامل فيغطي الصورة كليًا). */
+   ظاهرة بوضوح تحته (خلل سابق كان يجعل هذا التدرّج معتمًا بالكامل فيغطي الصورة كليًا). كما نزيح
+   نقطة القص نحو الجزء الأكثر فيروزيًا من هذه الصورة تحديدًا بدل المنتصف الافتراضي، حتى يهيمن
+   اللون الفيروزي اللامع على أغلب مساحة الـHero بدل الأزرق الغامق العلوي. */
+.hero-banner.is-fallback .hero-banner-img { object-position: 65% 78%; }
 .hero-banner-content { position: relative; padding: 28px 22px 26px; width: 100%; }
 .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
