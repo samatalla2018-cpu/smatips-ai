@@ -72,7 +72,9 @@ function packingItemHtml(it) {
     </div>`;
 }
 
-function renderPacking(container) {
+// المحتوى الحقيقي لصفحة الأغراض — يُستدعى فقط بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود
+// لرحلة بعد أصلًا). renderPacking أدناه هو المسؤول الوحيد عن قرار الفتح/القفل.
+function renderPackingContent(container) {
   const allItems = store.list('packing');
   const items = packingFilter === 'الكل' ? allItems : allItems.filter((it) => (it.category || 'أخرى') === packingFilter);
 
@@ -102,7 +104,7 @@ function renderPacking(container) {
   qs('#add-item-btn').addEventListener('click', () => openPackingModal());
 
   qsa('[data-filter]').forEach((btn) => {
-    btn.addEventListener('click', () => { packingFilter = btn.dataset.filter; renderPacking(container); });
+    btn.addEventListener('click', () => { packingFilter = btn.dataset.filter; renderPackingContent(container); });
   });
 
   qs('#packing-list').addEventListener('click', (e) => {
@@ -113,16 +115,45 @@ function renderPacking(container) {
     if (action === 'toggle') {
       const it = store.get('packing', id);
       store.update('packing', id, { packed: !it.packed });
-      renderPacking(container);
+      renderPackingContent(container);
     } else if (action === 'edit') {
       openPackingModal(id);
     } else if (action === 'delete') {
       if (confirm('هل تريد حذف هذا الغرض؟')) {
         store.remove('packing', id);
         toast('تم الحذف');
-        renderPacking(container);
+        renderPackingContent(container);
       }
     }
+  });
+}
+
+// نقطة الدخول الوحيدة للراوت: قائمة الأغراض الكاملة ميزة مدفوعة — تُقفَل فقط عند وجود رحلة
+// محفوظة (fail-closed)؛ بلا trip_id تبقى القائمة متاحة كأداة عامة (لا رحلة لتقييدها).
+function renderPacking(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderPackingContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'قائمة أغراض السفر', desc: 'تأكد أنك لم تنسَ شيئًا', iconName: 'bag' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderPackingContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'bag',
+      title: 'قائمة الأغراض جزء من خطتك الكاملة',
+      desc: 'افتح خطتك الكاملة لإعداد قائمة أغراضك ومتابعة تجهيزها.',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
   });
 }
 

@@ -49,7 +49,11 @@ export async function onRequestPost({ request, env }) {
         amount: Math.round(priceSar * 100),
         currency: 'SAR',
         description: `دفع رحلة SmaTrips AI — ${trip.title || 'رحلتي'}`,
-        callback_url: `${origin}/?payment=return`,
+        // trip_id هنا مجرد تلميح لواجهة العميل عند الرجوع (أي رحلة تُعرض بعد نجاح الدفع) — لا يُعتمد
+        // عليه كمصدر ثقة أمنية: js/app.js يتحقق من ملكية هذه الرحلة وحالة دفعها الحقيقية من
+        // GET /api/trips قبل إظهار أي نجاح، والويبهوك (المصدر الفعلي للتفعيل) يقرأ trip_id من
+        // بيانات فاتورة Moyasar الموثوقة نفسها (metadata) وليس من هذا الرابط أو من المتصفح.
+        callback_url: `${origin}/?payment=return&trip=${encodeURIComponent(tripId)}`,
         metadata: { phone: session.phone, trip_id: tripId },
       }),
     });

@@ -132,6 +132,54 @@ function money(n) {
   return num.toLocaleString('ar-EG', { maximumFractionDigits: 2 });
 }
 
+// حركة دخول لطيفة (Fade + Slide) لأي عنصر يحمل data-animate — تُستدعى تلقائيًا بعد كل تنقّل
+// (انظر router.js) وأيضًا يدويًا بعد إدراج HTML ديناميكي (مثل نتائج fetch) عند الحاجة.
+function initAnimate(root = document) {
+  const els = root.querySelectorAll ? Array.from(root.querySelectorAll('[data-animate]')) : [];
+  if (!els.length) return;
+  if (!('IntersectionObserver' in window)) {
+    els.forEach((el) => el.classList.add('in-view'));
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  els.forEach((el) => io.observe(el));
+}
+
+// تحقق مشترك من حالة رحلة معيّنة (ملكية + دفع حقيقي) — تستخدمه كل الصفحات التي تحتاج معرفة إن
+// كانت رحلة ما مفتوحة (بيانات الرحلة، الجدول اليومي، شاشة نجاح الدفع...) بدل تكرار نفس نداء
+// fetch('/api/trips') في كل صفحة على حدة. المصدر الوحيد للحقيقة يبقى استجابة الخادم نفسها —
+// هذا مجرد تخزين مؤقت قصير (10 ثوانٍ) لتفادي تكرار الطلب أثناء نفس التنقّل، وليس قرارًا محليًا.
+let _tripAccessCache = { tripId: null, at: 0, data: null };
+async function getTripAccess(tripId) {
+  if (!tripId) return { found: false, unlocked: false, trip: null };
+  if (_tripAccessCache.tripId === tripId && Date.now() - _tripAccessCache.at < 10000) {
+    return _tripAccessCache.data;
+  }
+  let result;
+  try {
+    const res = await fetch('/api/trips', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('failed');
+    const { trips } = await res.json();
+    const mine = trips.find((t) => t.id === tripId);
+    result = { found: !!mine, unlocked: !!(mine && mine.unlocked), trip: mine || null };
+  } catch {
+    result = { found: false, unlocked: false, trip: null };
+  }
+  _tripAccessCache = { tripId, at: Date.now(), data: result };
+  return result;
+}
+// يُستدعى بعد أي حدث يغيّر حالة الدفع فعليًا (مثل رجوع ناجح من الدفع) حتى لا تُستخدم نتيجة قديمة
+function invalidateTripAccessCache() { _tripAccessCache = { tripId: null, at: 0, data: null }; }
+
+window.getTripAccess = getTripAccess;
+window.invalidateTripAccessCache = invalidateTripAccessCache;
 window.uid = uid;
 window.escapeHtml = escapeHtml;
 window.formatDateAr = formatDateAr;
@@ -145,3 +193,4 @@ window.mapsEmbedUrl = mapsEmbedUrl;
 window.isValidMapsUrl = isValidMapsUrl;
 window.toast = toast;
 window.money = money;
+window.initAnimate = initAnimate;

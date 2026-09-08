@@ -13,15 +13,15 @@ function buildBottomNav() {
   const wrap = qs('#bottom-nav');
   const map = {
     dashboard: SECTIONS.find((s) => s.id === 'dashboard'),
-    itinerary: SECTIONS.find((s) => s.id === 'itinerary'),
-    tasks: SECTIONS.find((s) => s.id === 'tasks'),
+    trip: SECTIONS.find((s) => s.id === 'trip'),
     places: SECTIONS.find((s) => s.id === 'places'),
+    assistant: SECTIONS.find((s) => s.id === 'assistant'),
   };
   wrap.innerHTML = `
     <a class="bottom-nav-item" href="#${map.dashboard.path}" data-path="${map.dashboard.path}">${icon('home', 21)}<span>${map.dashboard.short}</span></a>
-    <a class="bottom-nav-item" href="#${map.itinerary.path}" data-path="${map.itinerary.path}">${icon('calendar', 21)}<span>${map.itinerary.short}</span></a>
-    <a class="bottom-nav-item" href="#${map.tasks.path}" data-path="${map.tasks.path}">${icon('check', 21)}<span>${map.tasks.short}</span></a>
+    <a class="bottom-nav-item" href="#${map.trip.path}" data-path="${map.trip.path}">${icon('passport', 21)}<span>${map.trip.short}</span></a>
     <a class="bottom-nav-item" href="#${map.places.path}" data-path="${map.places.path}">${icon('map', 21)}<span>${map.places.short}</span></a>
+    <a class="bottom-nav-item" href="#${map.assistant.path}" data-path="${map.assistant.path}">${icon('sparkle', 21)}<span>${map.assistant.short}</span></a>
     <button class="bottom-nav-item" id="more-nav-btn" type="button">${icon('menu', 21)}<span>المزيد</span></button>
   `;
   qs('#more-nav-btn').addEventListener('click', openNavSheet);
@@ -186,12 +186,35 @@ async function initSubscribeButtons() {
   });
 }
 
-function maybeShowPaymentSuccess() {
+async function maybeShowPaymentSuccess() {
   const params = new URLSearchParams(location.search);
   if (params.get('payment') !== 'return') return;
+  const returnTripId = params.get('trip') || '';
 
-  // نحذف ?payment=return من الرابط فورًا حتى لا تُعاد الشاشة عند التحديث لاحقًا
+  // نحذف ?payment=return (و trip) من الرابط فورًا حتى لا تُعاد الشاشة عند التحديث لاحقًا
   history.replaceState(null, '', location.pathname + location.hash);
+
+  if (returnTripId) {
+    // نتحقق من السيرفر (وليس من رابط الرجوع وحده) أن هذه الرحلة تخص المستخدم الحالي وأنها
+    // فُعِّلت فعليًا (payment_status='paid' في D1) قبل إظهار أي شاشة نجاح — GET /api/trips مبني
+    // على session.phone فقط، فلا يمكن انتحال رحلة مستخدم آخر بتزييف معامل trip في الرابط.
+    // نُبطل أي نتيجة مخزّنة مؤقتًا أولًا (getTripAccess في utils.js) حتى لا نثق بفحص سابق قبل الدفع.
+    invalidateTripAccessCache();
+    const { unlocked } = await getTripAccess(returnTripId);
+    // نبقى على نفس trip_id في الحالتين (نجاح أو عدم اكتمال) — لا تُفقد الرحلة ولا تُنشأ رحلة جديدة أبدًا.
+    store.updateTrip({ id: returnTripId });
+    if (!unlocked) {
+      // يشمل هذا كلًا من: الدفع لم يكتمل/أُلغي فعليًا، أو الويبهوك (وهو ما يُفعّل الدفع فعليًا) لم
+      // يصل بعد لأنه مستقل عن رجوع المتصفح — في الحالتين لا نعرض "تم الدفع بنجاح" بلا تأكيد حقيقي
+      // من السيرفر، ونعيد المستخدم لنفس صفحة الرحلة (معاينتها + زر إعادة المحاولة)، وليس لصفحة عامة.
+      toast('لم يكتمل الدفع — رحلتك محفوظة ويمكنك المحاولة مرة أخرى', 'error');
+      navigate('/trip');
+      return;
+    }
+    // نعيد المستخدم تلقائيًا لنفس trip_id الذي دفع عليه (وليس للرئيسية) — الصفحة الوجهة (trip.js)
+    // تُعيد التحقق من حالة الدفع من السيرفر بنفسها أيضًا عبر refreshTripStatusCard.
+    navigate('/trip');
+  }
 
   const overlay = qs('#payment-success-overlay');
   qs('#payment-success-icon').innerHTML = icon('check', 28);

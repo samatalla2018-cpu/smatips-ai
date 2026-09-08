@@ -35,6 +35,7 @@ function render() {
   closeNavSheet();
   try {
     fn(container);
+    if (window.initAnimate) initAnimate(container);
   } catch (err) {
     console.error('خطأ أثناء عرض الصفحة:', err);
     container.innerHTML = `

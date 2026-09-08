@@ -117,7 +117,10 @@ function serviceItemHtml(s) {
     </div>`;
 }
 
-function renderServices(container) {
+// المحتوى الحقيقي لقسم "خدماتك المحفوظة" (قائمة المستخدم الخاصة) — يُستدعى فقط بعد تأكيد أن
+// الرحلة مفتوحة فعليًا (أو لا وجود لرحلة بعد أصلًا). بطاقات "حجوزات موصى بها" (تسويقية) ليست جزءًا
+// من هذا ولا تخضع لأي قفل — تبقى ظاهرة دائمًا بغضّ النظر عن حالة الدفع، لأنها ليست بيانات الرحلة.
+function renderServicesContent(container) {
   const allServices = store.list('services');
   const services = servicesFilter === 'الكل' ? allServices : allServices.filter((s) => (s.category || 'أخرى') === servicesFilter);
 
@@ -151,7 +154,7 @@ function renderServices(container) {
   qs('#add-service-btn').addEventListener('click', () => openServiceModal());
 
   qsa('[data-filter]').forEach((btn) => {
-    btn.addEventListener('click', () => { servicesFilter = btn.dataset.filter; renderServices(container); });
+    btn.addEventListener('click', () => { servicesFilter = btn.dataset.filter; renderServicesContent(container); });
   });
 
   qs('#services-list').addEventListener('click', (e) => {
@@ -165,9 +168,47 @@ function renderServices(container) {
       if (confirm('هل تريد حذف هذه الخدمة؟')) {
         store.remove('services', id);
         toast('تم الحذف');
-        renderServices(container);
+        renderServicesContent(container);
       }
     }
+  });
+}
+
+// نقطة الدخول الوحيدة للراوت: "الحجوزات الموصى بها" التسويقية تبقى مرئية دائمًا (ليست بيانات
+// رحلة، فلا تخضع للدفع)؛ قسم "خدماتك المحفوظة" فقط هو الميزة المدفوعة، ويُقفَل عند وجود رحلة
+// محفوظة غير مفتوحة (fail-closed).
+function renderServices(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderServicesContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'خدمات موصى بها', desc: 'خدمات مقترحة لتسهيل رحلتك', iconName: 'star' })}
+    ${recommendedBookingsSection()}
+    <div id="services-gate">
+      <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+    </div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderServicesContent(container);
+      return;
+    }
+    const gateEl = qs('#services-gate');
+    if (!gateEl) return;
+    gateEl.innerHTML = `
+      <div class="section-title-row"><h2>خدماتك المحفوظة</h2></div>
+      ${lockedFeatureHtml({
+        iconName: 'star',
+        title: 'خدماتك المحفوظة جزء من خطتك الكاملة',
+        desc: 'افتح خطتك الكاملة لإضافة الخدمات التي توصي بها لنفسك ومتابعتها.',
+        tripId: trip.id,
+      })}
+    `;
+    if (window.initAnimate) initAnimate(gateEl);
   });
 }
 

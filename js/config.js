@@ -2,7 +2,7 @@
 
 const SECTIONS = [
   { id: 'dashboard', path: '/', title: 'الرئيسية', icon: 'home', short: 'الرئيسية', color: 'primary' },
-  { id: 'trip', path: '/trip', title: 'بيانات الرحلة', icon: 'passport', short: 'الرحلة', color: 'primary', desc: 'الوجهة، التواريخ، الميزانية ونوع الرحلة' },
+  { id: 'trip', path: '/trip', title: 'بيانات الرحلة', icon: 'passport', short: 'رحلتي', color: 'primary', desc: 'الوجهة، التواريخ، الميزانية ونوع الرحلة' },
   { id: 'itinerary', path: '/itinerary', title: 'جدول الرحلة اليومي', icon: 'calendar', short: 'الجدول', color: 'info', desc: 'خطة يومًا بيوم لكل الأنشطة والمواعيد' },
   { id: 'tasks', path: '/tasks', title: 'المهام', icon: 'check', short: 'المهام', color: 'success', desc: 'كل ما يجب إنجازه قبل السفر وأثناءه' },
   { id: 'packing', path: '/packing', title: 'قائمة أغراض السفر', icon: 'bag', short: 'الأغراض', color: 'accent', desc: 'تأكد أنك لم تنسَ شيئًا' },
@@ -16,7 +16,7 @@ const SECTIONS = [
   { id: 'trips', path: '/trips', title: 'رحلاتي', icon: 'suitcase', short: 'رحلاتي', color: 'primary', desc: 'ملفات رحلاتك المحفوظة، جاهزة للتنزيل في أي وقت' },
 ];
 
-const BOTTOM_NAV_IDS = ['dashboard', 'itinerary', 'tasks', 'places', 'more'];
+const BOTTOM_NAV_IDS = ['dashboard', 'trip', 'places', 'assistant', 'more'];
 
 const TRIP_TYPES = ['سياحية', 'عمل', 'عائلية', 'مغامرة', 'شهر عسل', 'دينية', 'علاجية', 'دراسية'];
 

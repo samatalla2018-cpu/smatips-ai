@@ -10,7 +10,9 @@ async function convertCurrency(from, to, amount) {
   return { rate, result: rate * amount };
 }
 
-function renderCurrency(container) {
+// المحتوى الحقيقي لصفحة العملات — يُستدعى فقط بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود
+// لرحلة بعد أصلًا). renderCurrency أدناه هو المسؤول الوحيد عن قرار الفتح/القفل.
+function renderCurrencyContent(container) {
   const trip = store.getTrip();
 
   container.innerHTML = `
@@ -78,6 +80,35 @@ function renderCurrency(container) {
 
   btn.addEventListener('click', doConvert);
   doConvert();
+}
+
+// نقطة الدخول الوحيدة للراوت: تحويل العملات ميزة مدفوعة — تُقفَل فقط عند وجود رحلة محفوظة
+// (fail-closed)؛ بلا trip_id تبقى الأداة متاحة كأداة عامة (لا رحلة لتقييدها).
+function renderCurrency(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderCurrencyContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'تحويل العملات', desc: 'أسعار صرف محدثة وتحويل فوري', iconName: 'currency' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderCurrencyContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'currency',
+      title: 'تحويل العملات جزء من خطتك الكاملة',
+      desc: 'افتح خطتك الكاملة لتحويل عملتك إلى عملة وجهتك بأسعار صرف حقيقية.',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
+  });
 }
 
 registerRoute('/currency', renderCurrency);

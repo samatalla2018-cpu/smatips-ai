@@ -210,7 +210,7 @@ async function performReplan(container, dayId, reason, note) {
 
     toast('تم ترتيب يومك من جديد ✨', 'success');
     didReplan = true;
-    renderItinerary(container);
+    renderItineraryContent(container);
   } catch {
     toast('حدث خطأ أثناء إعادة الترتيب، خطتك الحالية لم تتغيّر', 'error');
   } finally {
@@ -228,7 +228,7 @@ function undoReplan(container, dayId) {
   backup.activities.forEach((a) => store.add('activities', { ...a, dayId }));
   clearReplanBackup();
   toast('تمت العودة للخطة السابقة', 'success');
-  renderItinerary(container);
+  renderItineraryContent(container);
 }
 
 // إنشاء أيام الرحلة تلقائيًا حسب تواريخ الرحلة، مرة واحدة فقط إذا لم توجد أي أيام بعد
@@ -287,7 +287,7 @@ function openDayModal(container, dayId) {
         toast('تمت إضافة اليوم', 'success');
       }
       closeModal();
-      renderItinerary(container);
+      renderItineraryContent(container);
     });
   });
 }
@@ -392,7 +392,7 @@ function openActivityModal(container, dayId, activityId) {
         toast('تمت إضافة النشاط', 'success');
       }
       closeModal();
-      renderItinerary(container);
+      renderItineraryContent(container);
     });
   });
 }
@@ -425,28 +425,30 @@ function activityItemHtml(a, isFirst, isLast, allowReorder) {
   const typeMeta = PLACE_TYPES.find((t) => t.id === a.type) || PLACE_TYPES[PLACE_TYPES.length - 1];
   const mapsUrl = activityMapsInfo(a);
   return `
-    <div class="item-card" data-activity-id="${a.id}" style="padding:10px;">
-      <div class="page-header-icon" style="width:30px;height:30px;border-radius:9px;">${icon(typeMeta.icon, 14)}</div>
-      <div style="flex:1; min-width:0;">
-        <div class="item-title" style="font-size:13.5px;">${escapeHtml(a.title)}</div>
-        <div class="item-meta">
-          ${a.time ? `<span class="badge badge-primary">${escapeHtml(a.time)}</span>` : ''}
-          <span class="badge">${escapeHtml(typeMeta.label)}</span>
-          ${a.cost ? `<span class="badge badge-accent">${money(a.cost)}</span>` : ''}
+    <div class="timeline-item" data-activity-id="${a.id}">
+      <div class="timeline-dot">${icon(typeMeta.icon, 11)}</div>
+      <div class="item-card" style="padding:13px;">
+        <div style="flex:1; min-width:0;">
+          <div class="item-title" style="font-size:14.5px;">${escapeHtml(a.title)}</div>
+          <div class="item-meta">
+            ${a.time ? `<span class="badge badge-primary">${escapeHtml(a.time)}</span>` : ''}
+            <span class="badge">${escapeHtml(typeMeta.label)}</span>
+            ${a.cost ? `<span class="badge badge-accent">${money(a.cost)}</span>` : ''}
+          </div>
+          ${a.notes ? `<div class="text-sm text-muted mt-1">${escapeHtml(a.notes)}</div>` : ''}
+          ${mapsUrl ? `<a class="btn btn-outline btn-sm mt-2" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">${icon('map', 13)}<span>فتح على الخريطة</span></a>` : ''}
         </div>
-        ${a.notes ? `<div class="text-sm text-muted mt-1">${escapeHtml(a.notes)}</div>` : ''}
-        ${mapsUrl ? `<a class="btn btn-outline btn-sm mt-2" href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">${icon('map', 13)}<span>فتح على الخريطة</span></a>` : ''}
-      </div>
-      <div class="item-actions" style="flex-direction:column; align-items:stretch;">
-        <div class="flex gap-1">
-          <button class="icon-btn btn-sm" style="width:28px;height:28px;" data-activity-action="edit" aria-label="تعديل">${icon('edit', 12)}</button>
-          <button class="icon-btn btn-sm" style="width:28px;height:28px;" data-activity-action="delete" aria-label="حذف">${icon('trash', 12)}</button>
+        <div class="item-actions" style="flex-direction:column; align-items:stretch;">
+          <div class="flex gap-1">
+            <button class="icon-btn btn-sm" style="width:36px;height:36px;" data-activity-action="edit" aria-label="تعديل">${icon('edit', 14)}</button>
+            <button class="icon-btn btn-sm" style="width:36px;height:36px;" data-activity-action="delete" aria-label="حذف">${icon('trash', 14)}</button>
+          </div>
+          ${allowReorder ? `
+          <div class="flex gap-1 mt-1">
+            <button class="icon-btn btn-sm" style="width:36px;height:36px;" data-activity-action="move-up" ${isFirst ? 'disabled' : ''} aria-label="نقل لأعلى">${icon('chevronUp', 15)}</button>
+            <button class="icon-btn btn-sm" style="width:36px;height:36px;" data-activity-action="move-down" ${isLast ? 'disabled' : ''} aria-label="نقل لأسفل">${icon('chevronDown', 15)}</button>
+          </div>` : ''}
         </div>
-        ${allowReorder ? `
-        <div class="flex gap-1 mt-1">
-          <button class="icon-btn btn-sm" style="width:28px;height:28px;" data-activity-action="move-up" ${isFirst ? 'disabled' : ''} aria-label="نقل لأعلى">${icon('chevronUp', 13)}</button>
-          <button class="icon-btn btn-sm" style="width:28px;height:28px;" data-activity-action="move-down" ${isLast ? 'disabled' : ''} aria-label="نقل لأسفل">${icon('chevronDown', 13)}</button>
-        </div>` : ''}
       </div>
     </div>`;
 }
@@ -456,34 +458,46 @@ function dayCardHtml(day, activities, allowReorder) {
   const backup = isToday ? getReplanBackup() : null;
   const hasBackup = backup && backup.dayId === day.id;
   return `
-    <div class="card mt-2" data-day-id="${day.id}">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="font-bold">${formatDateAr(day.date)}</span>
-            ${isToday ? '<span class="badge badge-success">اليوم</span>' : ''}
-          </div>
-          ${day.title ? `<div class="text-sm text-muted mt-1">${escapeHtml(day.title)}</div>` : ''}
+    <div class="timeline-day" data-day-id="${day.id}" data-animate>
+      <div class="timeline-day-head">
+        <div class="timeline-day-title">
+          <span class="font-bold">${formatDateAr(day.date)}</span>
+          ${isToday ? '<span class="badge badge-success">اليوم</span>' : ''}
         </div>
         <div class="item-actions">
-          <button class="icon-btn btn-sm" style="width:32px;height:32px;" data-day-action="add-activity" aria-label="إضافة نشاط">${icon('plus', 15)}</button>
-          <button class="icon-btn btn-sm" style="width:32px;height:32px;" data-day-action="edit" aria-label="تعديل اليوم">${icon('edit', 14)}</button>
-          <button class="icon-btn btn-sm" style="width:32px;height:32px;" data-day-action="delete" aria-label="حذف اليوم">${icon('trash', 14)}</button>
+          <button class="icon-btn btn-sm" style="width:38px;height:38px;" data-day-action="add-activity" aria-label="إضافة نشاط">${icon('plus', 16)}</button>
+          <button class="icon-btn btn-sm" style="width:38px;height:38px;" data-day-action="edit" aria-label="تعديل اليوم">${icon('edit', 15)}</button>
+          <button class="icon-btn btn-sm" style="width:38px;height:38px;" data-day-action="delete" aria-label="حذف اليوم">${icon('trash', 15)}</button>
         </div>
       </div>
-      ${day.notes ? `<div class="text-sm text-muted mt-2">${escapeHtml(day.notes)}</div>` : ''}
+      ${day.title ? `<div class="text-sm text-muted" style="margin:-6px 0 10px;">${escapeHtml(day.title)}</div>` : ''}
+      ${day.notes ? `<div class="text-sm text-muted mt-1" style="margin-bottom:10px;">${escapeHtml(day.notes)}</div>` : ''}
       ${isToday ? `
-      <div class="flex gap-2 mt-2">
+      <div class="flex gap-2" style="margin-bottom:12px;">
         <button class="btn btn-primary btn-sm" data-day-action="replan">${icon('sparkle', 15)}<span>رتّب لي اليوم من جديد</span></button>
         ${hasBackup ? `<button class="btn btn-outline btn-sm" data-day-action="undo-replan">العودة للخطة السابقة</button>` : ''}
       </div>` : ''}
-      <div class="mt-3">
-        ${activities.length ? activities.map((a, i) => activityItemHtml(a, i === 0, i === activities.length - 1, allowReorder)).join('') : `<div class="text-sm text-muted" style="text-align:center; padding:10px;">لا توجد أنشطة في هذا اليوم${itineraryPeriodFilter !== 'الكل' ? ' لهذه الفترة' : ''}</div>`}
-      </div>
+      ${activities.length
+        ? `<div class="timeline-list">${activities.map((a, i) => activityItemHtml(a, i === 0, i === activities.length - 1, allowReorder)).join('')}</div>`
+        : `<div class="text-sm text-muted" style="text-align:center; padding:10px;">لا توجد أنشطة في هذا اليوم${itineraryPeriodFilter !== 'الكل' ? ' لهذه الفترة' : ''}</div>`}
     </div>`;
 }
 
-function renderItinerary(container) {
+// يبني قائمة الأيام كـHTML — الجدول الكامل يُعرض فقط بعد تأكيد الفتح (renderItinerary أدناه)،
+// فلا حاجة هنا لأي منطق قفل جزئي؛ المعاينة المجانية (يوم واحد) تعيش في صفحة "رحلتي" فقط.
+function renderDaysListHtml(days, allActivities, allowReorder) {
+  return days.map((day) => {
+    let activities = allActivities.filter((a) => a.dayId === day.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (['صباح', 'ظهر', 'مساء'].includes(itineraryPeriodFilter)) {
+      activities = activities.filter((a) => activityPeriod(a.time) === itineraryPeriodFilter);
+    }
+    return dayCardHtml(day, activities, allowReorder);
+  }).join('');
+}
+
+// المحتوى الحقيقي لصفحة الجدول — يُستدعى فقط بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود لرحلة
+// بعد أصلًا)، أبدًا قبل ذلك. renderItinerary أدناه هو المسؤول الوحيد عن قرار الفتح/القفل.
+function renderItineraryContent(container) {
   const trip = store.getTrip();
   autoGenerateDays(trip);
 
@@ -505,13 +519,7 @@ function renderItinerary(container) {
       <button class="chip ${itineraryPeriodFilter === 'مساء' ? 'active' : ''}" data-period="مساء">مساء</button>
     </div>`;
 
-  const daysHtml = days.map((day) => {
-    let activities = allActivities.filter((a) => a.dayId === day.id).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    if (['صباح', 'ظهر', 'مساء'].includes(itineraryPeriodFilter)) {
-      activities = activities.filter((a) => activityPeriod(a.time) === itineraryPeriodFilter);
-    }
-    return dayCardHtml(day, activities, allowReorder);
-  }).join('');
+  const daysHtml = renderDaysListHtml(days, allActivities, allowReorder);
 
   container.innerHTML = `
     ${pageHeader({
@@ -529,11 +537,12 @@ function renderItinerary(container) {
       )}
     </div>
   `;
+  if (window.initAnimate) initAnimate(container);
 
   qs('#add-day-btn').addEventListener('click', () => openDayModal(container));
 
   qsa('[data-period]').forEach((btn) => {
-    btn.addEventListener('click', () => { itineraryPeriodFilter = btn.dataset.period; renderItinerary(container); });
+    btn.addEventListener('click', () => { itineraryPeriodFilter = btn.dataset.period; renderItineraryContent(container); });
   });
 
   qs('#days-list').addEventListener('click', (e) => {
@@ -563,7 +572,7 @@ function renderItinerary(container) {
         store.list('activities').filter((a) => a.dayId === dayId).forEach((a) => store.remove('activities', a.id));
         store.remove('days', dayId);
         toast('تم حذف اليوم');
-        renderItinerary(container);
+        renderItineraryContent(container);
       }
       return;
     }
@@ -578,15 +587,44 @@ function renderItinerary(container) {
       if (confirm('هل تريد حذف هذا النشاط؟')) {
         store.remove('activities', activityId);
         toast('تم حذف النشاط');
-        renderItinerary(container);
+        renderItineraryContent(container);
       }
     } else if (activityAction === 'move-up') {
       moveActivity(dayId, activityId, 'up');
-      renderItinerary(container);
+      renderItineraryContent(container);
     } else if (activityAction === 'move-down') {
       moveActivity(dayId, activityId, 'down');
-      renderItinerary(container);
+      renderItineraryContent(container);
     }
+  });
+}
+
+// نقطة الدخول الوحيدة للراوت: تقرر أولًا هل الجدول الكامل مفتوح لهذه الرحلة قبل عرض أي محتوى
+// حقيقي (fail-closed) — بلا trip_id يُعرض المحتوى مباشرة (لا رحلة لتقييدها بعد).
+function renderItinerary(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderItineraryContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'جدول الرحلة اليومي', desc: 'خطط لكل يوم من رحلتك بالتفصيل', iconName: 'calendar' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderItineraryContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'calendar',
+      title: 'الجدول اليومي الكامل جزء من خطتك',
+      desc: 'افتح خطتك الكاملة لتشاهد جدول رحلتك يومًا بيوم وتعدّله كما تريد — يوم رحلتك الأول متاح للمعاينة من صفحة "رحلتي".',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
   });
 }
 

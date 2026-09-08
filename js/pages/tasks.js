@@ -88,7 +88,9 @@ function taskItemHtml(t) {
     </div>`;
 }
 
-function renderTasks(container) {
+// المحتوى الحقيقي لصفحة المهام — يُستدعى فقط بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود
+// لرحلة بعد أصلًا). renderTasks أدناه هو المسؤول الوحيد عن قرار الفتح/القفل.
+function renderTasksContent(container) {
   const allTasks = store.list('tasks');
   const tasks = tasksFilter === 'الكل' ? allTasks : allTasks.filter((t) => (t.category || 'أخرى') === tasksFilter);
 
@@ -118,7 +120,7 @@ function renderTasks(container) {
   qs('#add-task-btn').addEventListener('click', () => openTaskModal());
 
   qsa('[data-filter]').forEach((btn) => {
-    btn.addEventListener('click', () => { tasksFilter = btn.dataset.filter; renderTasks(container); });
+    btn.addEventListener('click', () => { tasksFilter = btn.dataset.filter; renderTasksContent(container); });
   });
 
   qs('#tasks-list').addEventListener('click', (e) => {
@@ -129,16 +131,45 @@ function renderTasks(container) {
     if (action === 'toggle') {
       const t = store.get('tasks', id);
       store.update('tasks', id, { done: !t.done });
-      renderTasks(container);
+      renderTasksContent(container);
     } else if (action === 'edit') {
       openTaskModal(id);
     } else if (action === 'delete') {
       if (confirm('هل تريد حذف هذه المهمة؟')) {
         store.remove('tasks', id);
         toast('تم حذف المهمة');
-        renderTasks(container);
+        renderTasksContent(container);
       }
     }
+  });
+}
+
+// نقطة الدخول الوحيدة للراوت: قائمة المهام الكاملة ميزة مدفوعة — تُقفَل فقط عند وجود رحلة
+// محفوظة (fail-closed)؛ بلا trip_id تبقى القائمة متاحة كأداة عامة (لا رحلة لتقييدها).
+function renderTasks(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderTasksContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'المهام', desc: 'كل ما يجب إنجازه قبل السفر وأثناءه', iconName: 'check' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderTasksContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'check',
+      title: 'قائمة المهام جزء من خطتك الكاملة',
+      desc: 'افتح خطتك الكاملة لإضافة مهامك ومتابعة إنجازها أولًا بأول.',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
   });
 }
 

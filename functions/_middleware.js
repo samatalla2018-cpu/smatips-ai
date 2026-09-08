@@ -1,19 +1,19 @@
 import { readSessionCookie, verifySessionToken } from './_utils.js';
 
 const BRAND_STYLE = `
-  :root{--bg:#F7F3FF;--surface:#FFFFFF;--border:#E3D8F7;--text:#1E1A33;--text-muted:#6D6488;--primary:#8B5CF6;--primary-dark:#7C3AED;}
+  :root{--bg:#F5FAF9;--surface:#FFFFFF;--border:#DCEEE9;--text:#0E2A2B;--text-muted:#5D7B7A;--primary:#0D9C8F;--primary-dark:#0A7A70;--sky:#29A7DE;}
   *{box-sizing:border-box;}
-  body{margin:0;font-family:'Cairo',sans-serif;background:radial-gradient(circle at 20% 0%, rgba(139,92,246,.10), transparent 55%), var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
-  .box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 16px 40px rgba(16,24,40,.12);}
+  body{margin:0;font-family:'Cairo',sans-serif;background:radial-gradient(circle at 20% 0%, rgba(13,156,143,.10), transparent 55%), radial-gradient(circle at 100% 20%, rgba(41,167,222,.08), transparent 45%), var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 16px 40px rgba(9,46,45,.12);}
   h1{font-size:19px;margin:0 0 6px;text-align:center;}
   p.sub{font-size:13px;color:var(--text-muted);text-align:center;margin:0 0 20px;}
   label{font-size:13px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;}
-  input{width:100%;height:46px;border-radius:12px;border:1px solid var(--border);padding:0 14px;font-size:15px;font-family:inherit;margin-bottom:14px;outline:none;}
+  input{width:100%;height:46px;border-radius:13px;border:1px solid var(--border);padding:0 14px;font-size:15px;font-family:inherit;margin-bottom:14px;outline:none;}
   input:focus{border-color:var(--primary);}
-  button{width:100%;height:46px;border-radius:12px;border:none;background:var(--primary);color:#fff;font-weight:800;font-size:14.5px;cursor:pointer;}
+  button{width:100%;height:48px;border-radius:999px;border:none;background:linear-gradient(135deg,var(--primary),var(--sky));color:#fff;font-weight:800;font-size:14.5px;cursor:pointer;box-shadow:0 10px 24px rgba(13,156,143,.28);}
   button:hover{filter:brightness(1.06);}
   button:disabled{opacity:.6;cursor:not-allowed;}
-  button.ghost{background:transparent;color:var(--text-muted);font-weight:700;margin-top:10px;}
+  button.ghost{background:transparent;color:var(--text-muted);font-weight:700;margin-top:10px;box-shadow:none;}
   .msg{font-size:13px;text-align:center;margin-top:12px;min-height:18px;}
   .msg.error{color:#E11D48;}
   .msg.success{color:#16A34A;}
@@ -47,53 +47,69 @@ const LP_TIKTOK_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="no
 const LP_MAIL_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5.5" width="17" height="13" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M4.3 7l7.7 6 7.7-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const LANDING_STYLE = `
-  :root{--accent:#D9A441;--accent-light:#FAF0DA;--sky:#22C7E8;--sky-light:#E1F7FB;--primary-light:#EDE4FF;}
+  :root{--accent:#FF8A5B;--accent-dark:#E86A3C;--accent-light:#FFE9DE;--sky:#29A7DE;--sky-light:#E1F4FC;--primary-light:#D9F3EE;--text-faint:#93AEAB;}
   body{display:block;padding:0;align-items:initial;justify-content:initial;background:
-    radial-gradient(circle at 12% 0%, rgba(139,92,246,.09), transparent 45%),
-    radial-gradient(circle at 100% 15%, rgba(34,199,232,.08), transparent 40%),
+    radial-gradient(circle at 12% 0%, rgba(13,156,143,.08), transparent 45%),
+    radial-gradient(circle at 100% 15%, rgba(41,167,222,.08), transparent 40%),
     #FFFFFF;}
   .lp{max-width:1180px;margin:0 auto;padding:0 18px;}
 
-  .lp-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:16px 18px;max-width:1180px;margin:0 auto;background:rgba(255,255,255,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
-  .lp-header img{height:36px;width:36px;border-radius:10px;}
-  .lp-header .lp-brand-title{font-size:16px;font-weight:800;}
-  .lp-header .lp-brand-sub{font-size:11.5px;color:var(--text-muted);font-weight:600;}
+  .lp-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:14px 18px;max-width:1180px;margin:0 auto;background:rgba(255,255,255,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+  .lp-header img{height:34px;width:auto;}
+  .lp-header .lp-brand-sub{font-size:11.5px;color:var(--text-muted);font-weight:700;margin-inline-start:auto;display:none;}
 
-  .lp-eyebrow{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:999px;background:var(--primary-light);color:var(--primary-dark);font-size:12px;font-weight:800;margin-bottom:16px;}
+  .lp-eyebrow{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:999px;background:rgba(255,255,255,.85);color:var(--primary-dark);font-size:12px;font-weight:800;margin-bottom:16px;box-shadow:0 4px 14px rgba(9,46,45,.08);}
 
-  .lp-hero{padding:30px 4px 26px;}
-  .lp-hero-inner{display:flex;flex-direction:column;align-items:center;}
-  .lp-hero-text{text-align:center;}
-  .lp-hero h1{font-size:27px;line-height:1.35;font-weight:900;margin:0 0 14px;background:linear-gradient(90deg,var(--primary-dark),var(--primary));-webkit-background-clip:text;background-clip:text;color:transparent;}
-  .lp-hero p{font-size:14.5px;color:var(--text-muted);max-width:560px;margin:0 auto 22px;line-height:1.85;}
+  /* ===== Hero بصورة سفر حقيقية بملء العرض — أول انطباع "بدأت رحلتي بالفعل" ===== */
+  .lp-hero{position:relative;margin:10px 4px 0;border-radius:26px;overflow:hidden;isolation:isolate;min-height:78vw;box-shadow:0 20px 48px rgba(9,46,45,.16);}
+  .lp-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;}
+  .lp-hero-scrim{position:absolute;inset:0;z-index:-1;background:
+    linear-gradient(0deg, rgba(6,26,28,.92) 0%, rgba(6,26,28,.55) 46%, rgba(6,26,28,.18) 100%);}
+  .lp-hero-inner{display:flex;flex-direction:column;align-items:flex-start;padding:34px 20px 30px;color:#fff;}
+  .lp-hero-text{text-align:right;width:100%;}
+  .lp-hero h1{font-size:26px;line-height:1.34;font-weight:900;margin:0 0 12px;color:#fff;}
+  .lp-hero p{font-size:14px;color:rgba(255,255,255,.9);max-width:520px;margin:0 0 22px;line-height:1.85;}
   .lp-hero-visual{display:none;}
-  .lp-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:52px;padding:0 30px;border:none;border-radius:15px;background:linear-gradient(90deg,var(--primary),var(--primary-dark));color:#fff;font-weight:800;font-size:15.5px;cursor:pointer;box-shadow:0 10px 26px rgba(139,92,246,.28);transition:transform .15s ease, box-shadow .15s ease;}
-  .lp-cta:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(139,92,246,.36);}
+  .lp-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:52px;padding:0 28px;border:none;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-dark));color:#fff;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 14px 30px rgba(232,106,60,.4);transition:transform .15s ease, box-shadow .15s ease;}
+  .lp-cta:hover{transform:translateY(-1px);box-shadow:0 18px 34px rgba(232,106,60,.46);}
   .lp-cta:active{transform:translateY(0);}
-  .lp-cta .gold-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+  .lp-cta .gold-dot{width:7px;height:7px;border-radius:50%;background:#fff;opacity:.9;}
 
-  .lp-cards{display:grid;grid-template-columns:1fr;gap:12px;padding:8px 4px 36px;}
-  .lp-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 18px;text-align:center;font-weight:700;font-size:14px;box-shadow:0 4px 16px rgba(16,24,40,.05);transition:transform .18s ease, box-shadow .18s ease;}
-  .lp-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(16,24,40,.09);}
+  .lp-cards{display:grid;grid-template-columns:1fr;gap:12px;padding:24px 4px 8px;}
+  .lp-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 18px;text-align:center;font-weight:700;font-size:14px;box-shadow:0 4px 16px rgba(9,46,45,.05);transition:transform .18s ease, box-shadow .18s ease;}
+  .lp-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(9,46,45,.09);}
 
-  .lp-section-title{text-align:center;font-size:21px;font-weight:900;margin:0 0 22px;}
-  .lp-features{padding:10px 4px 38px;}
+  .lp-section-title{text-align:center;font-size:21px;font-weight:900;margin:0 0 20px;}
+  .lp-section-sub{text-align:center;font-size:13.5px;color:var(--text-muted);font-weight:600;margin:-12px 0 22px;}
+
+  /* ===== شريط إلهام الوجهات — صور سفر حقيقية جذابة ===== */
+  .lp-dest{padding:34px 4px 6px;}
+  .lp-dest-strip{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:none;}
+  .lp-dest-strip::-webkit-scrollbar{display:none;}
+  .lp-dest-card{position:relative;flex:0 0 auto;width:150px;height:194px;border-radius:20px;overflow:hidden;scroll-snap-align:start;box-shadow:0 4px 16px rgba(9,46,45,.08);}
+  .lp-dest-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .lp-dest-scrim{position:absolute;inset:0;background:linear-gradient(0deg, rgba(6,26,28,.88) 0%, rgba(6,26,28,.05) 60%);}
+  .lp-dest-info{position:absolute;inset-inline:0;bottom:0;padding:12px;color:#fff;}
+  .lp-dest-name{font-size:13.5px;font-weight:800;}
+  .lp-dest-country{font-size:10.5px;font-weight:700;color:rgba(255,255,255,.82);margin-top:2px;}
+
+  .lp-features{padding:12px 4px 38px;}
   .lp-feat-grid{display:grid;grid-template-columns:1fr;gap:12px;}
-  .lp-feat{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 14px;text-align:center;box-shadow:0 4px 14px rgba(16,24,40,.05);transition:transform .18s ease, box-shadow .18s ease;}
-  .lp-feat:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(16,24,40,.09);}
+  .lp-feat{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 14px;text-align:center;box-shadow:0 4px 14px rgba(9,46,45,.05);transition:transform .18s ease, box-shadow .18s ease;}
+  .lp-feat:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(9,46,45,.09);}
   .lp-feat .icon-wrap{width:44px;height:44px;border-radius:13px;background:var(--primary-light);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;}
-  .lp-feat:nth-child(2n) .icon-wrap{background:var(--sky-light);color:#0E8FA8;}
-  .lp-feat:nth-child(4n) .icon-wrap{background:var(--accent-light);color:#A6791F;}
+  .lp-feat:nth-child(2n) .icon-wrap{background:var(--sky-light);color:#0E7FA8;}
+  .lp-feat:nth-child(4n) .icon-wrap{background:var(--accent-light);color:var(--accent-dark);}
   .lp-feat span{font-size:12.5px;font-weight:700;line-height:1.5;display:block;}
 
   .lp-pitch{text-align:center;padding:14px 4px 40px;}
   .lp-pitch p{font-size:17px;font-weight:800;max-width:520px;margin:0 auto 22px;line-height:1.7;}
-  .lp-pitch .gold-rule{width:52px;height:3px;border-radius:3px;background:var(--accent);margin:0 auto 18px;}
+  .lp-pitch .gold-rule{width:52px;height:3px;border-radius:3px;background:linear-gradient(90deg,var(--primary),var(--sky));margin:0 auto 18px;}
 
   .lp-login-wrap{padding:6px 4px 50px;display:flex;justify-content:center;}
   .lp-login-wrap.hidden{display:none;}
-  .lp-login-card.box{max-width:420px;border-radius:24px;padding:34px 26px;box-shadow:0 20px 48px rgba(16,24,40,.13);}
-  .lp-login-icon{width:50px;height:50px;border-radius:15px;background:var(--primary-light);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+  .lp-login-card.box{max-width:420px;border-radius:26px;padding:34px 26px;box-shadow:0 20px 48px rgba(9,46,45,.13);}
+  .lp-login-icon{width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,var(--primary-light),var(--sky-light));color:var(--primary-dark);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
 
   .lp-footer{border-top:1px solid var(--border);padding:26px 4px 30px;text-align:center;}
   .lp-footer .lp-social-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;}
@@ -108,41 +124,39 @@ const LANDING_STYLE = `
   /* ===== تابلت ===== */
   @media (min-width:640px){
     .lp-header{padding:18px 20px;}
-    .lp-hero{padding:46px 4px 36px;}
-    .lp-hero h1{font-size:33px;}
+    .lp-hero{min-height:440px;}
+    .lp-hero-inner{padding:52px 40px 44px;}
+    .lp-hero h1{font-size:36px;}
     .lp-hero p{font-size:15.5px;}
     .lp-cards{grid-template-columns:repeat(3,1fr);gap:16px;}
+    .lp-dest-card{width:180px;height:224px;}
     .lp-feat-grid{grid-template-columns:repeat(2,1fr);gap:14px;}
     .lp-pitch p{font-size:19px;}
   }
 
-  /* ===== كمبيوتر مكتبي: استغلال أوسع للعرض، Hero بعمودين ===== */
+  /* ===== كمبيوتر مكتبي ===== */
   @media (min-width:1024px){
     .lp{padding:0 40px;}
-    .lp-header{padding:22px 40px;}
-    .lp-header img{height:42px;width:42px;}
-    .lp-header .lp-brand-title{font-size:18px;}
-    .lp-header .lp-brand-sub{font-size:12.5px;}
+    .lp-header{padding:20px 40px;}
+    .lp-header img{height:38px;}
+    .lp-header .lp-brand-sub{display:block;}
 
-    .lp-hero{padding:64px 4px 56px;}
-    .lp-hero-inner{flex-direction:row;align-items:center;justify-content:space-between;gap:64px;}
-    .lp-hero-text{text-align:right;flex:1 1 50%;}
-    .lp-hero-text .lp-eyebrow{margin-inline:0;}
-    .lp-hero h1{font-size:46px;line-height:1.28;}
-    .lp-hero p{font-size:16.5px;max-width:480px;margin:0 0 28px;}
-    .lp-hero-visual{display:block;position:relative;flex:1 1 44%;height:380px;}
-    .lp-hero-blob{position:absolute;inset:0;border-radius:32px;background:linear-gradient(135deg,var(--primary-light),var(--sky-light) 75%);box-shadow:0 24px 56px rgba(139,92,246,.16);}
-    .lp-hero-blob::after{content:'';position:absolute;inset:0;border-radius:32px;background:radial-gradient(circle at 85% 12%, rgba(217,164,65,.22), transparent 45%);}
-    .lp-chip{position:absolute;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:11px 16px;font-size:13px;font-weight:800;box-shadow:0 12px 26px rgba(16,24,40,.1);color:var(--text);}
-    .lp-chip-1{top:10%;right:6%;color:var(--primary-dark);}
-    .lp-chip-2{top:46%;right:50%;color:#0E8FA8;}
-    .lp-chip-3{bottom:8%;right:16%;color:#A6791F;}
+    .lp-hero{min-height:0;}
+    .lp-hero-inner{padding:88px 64px 76px;align-items:center;}
+    .lp-hero-text{text-align:center;max-width:680px;}
+    .lp-hero-text .lp-eyebrow{margin-inline:auto;}
+    .lp-hero h1{font-size:50px;line-height:1.22;}
+    .lp-hero p{font-size:17px;max-width:560px;margin:0 auto 30px;}
+    .lp-hero .lp-cta{margin:0 auto;}
 
-    .lp-cards{gap:20px;padding:28px 4px 64px;}
+    .lp-cards{gap:20px;padding:34px 4px 10px;}
     .lp-card{padding:26px 22px;font-size:15px;border-radius:20px;}
 
+    .lp-dest{padding:46px 4px 10px;}
+    .lp-dest-card{width:200px;height:250px;border-radius:22px;}
+
     .lp-features{padding:22px 4px 68px;}
-    .lp-section-title{font-size:27px;margin-bottom:34px;}
+    .lp-section-title{font-size:27px;}
     .lp-feat-grid{grid-template-columns:repeat(3,1fr);gap:18px;}
     .lp-feat{padding:24px 18px;border-radius:20px;}
     .lp-feat .icon-wrap{width:50px;height:50px;border-radius:14px;}
@@ -155,33 +169,55 @@ const LANDING_STYLE = `
   }
 `;
 
-// الأقسام التسويقية المشتركة لصفحة الهبوط (Hero + البطاقات + المزايا + الدعوة للعمل) —
+// وجهات سفر حقيقية جذابة تُعرض في شريط الإلهام — تزيين بصري بحت، لا علاقة له بأي بيانات مستخدم
+const LP_DESTINATIONS = [
+  { name: 'إسطنبول', country: 'تركيا', img: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=480&auto=format&fit=crop' },
+  { name: 'سانتوريني', country: 'اليونان', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=480&auto=format&fit=crop' },
+  { name: 'جزر المالديف', country: 'المالديف', img: 'https://images.unsplash.com/photo-1512100356356-de1b84283e18?q=80&w=480&auto=format&fit=crop' },
+  { name: 'باريس', country: 'فرنسا', img: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=480&auto=format&fit=crop' },
+  { name: 'أجرا', country: 'الهند', img: 'https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=480&auto=format&fit=crop' },
+  { name: 'البندقية', country: 'إيطاليا', img: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?q=80&w=480&auto=format&fit=crop' },
+];
+
+function destinationStripHtml() {
+  return `
+    <section class="lp-dest" data-animate>
+      <h2 class="lp-section-title">وجهات يحبها مسافرونا</h2>
+      <p class="lp-section-sub">أفكار تلهمك قبل ما تحدد وجهتك القادمة</p>
+      <div class="lp-dest-strip">
+        ${LP_DESTINATIONS.map((d) => `
+          <div class="lp-dest-card">
+            <img src="${d.img}" alt="${d.name}" loading="lazy" />
+            <div class="lp-dest-scrim"></div>
+            <div class="lp-dest-info">
+              <div class="lp-dest-name">${d.name}</div>
+              <div class="lp-dest-country">${d.country}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </section>`;
+}
+
+// الأقسام التسويقية المشتركة لصفحة الهبوط (Hero + البطاقات + شريط الوجهات + المزايا + الدعوة للعمل) —
 // تُستخدم دون أي تعديل في كل من صفحة تسجيل الدخول وصفحة الاشتراك بعد التحقق، حتى لا يفقد
 // المستخدم سياق المنتج (المزايا والتسعير) في أي مرحلة من رحلته قبل الدفع.
 function landingMarketingHtml() {
   return `
   <header class="lp-header">
     <img src="/assets/logo/logo-mark.png" alt="SmaTrips AI" />
-    <div>
-      <div class="lp-brand-title">SmaTrips AI</div>
-      <div class="lp-brand-sub">مساعد المسافر الذكي</div>
-    </div>
+    <div class="lp-brand-sub">مساعد المسافر الذكي</div>
   </header>
 
   <div class="lp">
     <section class="lp-hero" data-animate>
+      <img class="lp-hero-img" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1400&auto=format&fit=crop" alt="" />
+      <div class="lp-hero-scrim"></div>
       <div class="lp-hero-inner">
         <div class="lp-hero-text">
           <span class="lp-eyebrow">${lpIcon('sparkle', 15)}مساعد سفرك الذكي</span>
           <h1>رتّب سفرتك كلها في مكان واحد</h1>
           <p>خطتك اليومية، مهامك، أغراض السفر، الطقس، العملات، المقابس والروابط المهمة… بدون تشتت بين الملاحظات والتطبيقات.</p>
           <button class="lp-cta" id="hero-cta" type="button"><span class="gold-dot"></span>ابدأ التخطيط الآن</button>
-        </div>
-        <div class="lp-hero-visual" aria-hidden="true">
-          <div class="lp-hero-blob"></div>
-          <div class="lp-chip lp-chip-1">${lpIcon('calendar', 17)}<span>الجدول اليومي</span></div>
-          <div class="lp-chip lp-chip-2">${lpIcon('cloud', 17)}<span>الطقس</span></div>
-          <div class="lp-chip lp-chip-3">${lpIcon('bag', 17)}<span>أغراض السفر</span></div>
         </div>
       </div>
     </section>
@@ -191,6 +227,8 @@ function landingMarketingHtml() {
       <div class="lp-card">خطتك محفوظة وتفتحها من أي جهاز</div>
       <div class="lp-card">مساعد ذكي قبل السفر وأثناء الرحلة</div>
     </section>
+
+    ${destinationStripHtml()}
 
     <section class="lp-features" data-animate>
       <h2 class="lp-section-title">ليش SmaTrips AI؟</h2>
@@ -247,7 +285,7 @@ function loginHtml() {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SmaTrips AI — مساعد المسافر الذكي</title>
 <meta name="description" content="رتّب سفرتك كلها في مكان واحد: خطتك اليومية، مهامك، أغراض السفر، الطقس، العملات، والمزيد." />
-<meta name="theme-color" content="#8B5CF6" />
+<meta name="theme-color" content="#0D9C8F" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
@@ -283,6 +321,12 @@ ${landingFooterHtml()}
   const stepOtp = document.getElementById('step-otp');
   const loginSection = document.getElementById('login-section');
   let currentPhone = '';
+
+  // الوجهة الأصلية (مثلًا #/pay?trip=xxx) تُحفظ فور تحميل صفحة الدخول — قبل أي تفاعل مع OTP —
+  // حتى نعيد المستخدم إلى نفس الرحلة/الصفحة بعد نجاح التحقق بدل الرئيسية دائمًا. المتصفح يُبقي
+  // الـhash كما هو طوال هذه الصفحة (لا تنقّل حتى لحظة إعادة التوجيه بعد النجاح)، فقراءته هنا
+  // تلتقط بالضبط الرابط الذي حاول المستخدم فتحه قبل أن يُحجب خلف شاشة الدخول.
+  const returnHash = (location.hash && location.hash.startsWith('#/')) ? location.hash : '';
 
   function setMsg(text, type) {
     msg.textContent = text || '';
@@ -327,7 +371,20 @@ ${landingFooterHtml()}
       const data = await res.json();
       if (!res.ok) { setMsg(data.error || 'رمز غير صحيح', 'error'); btn.disabled = false; return; }
       setMsg('تم التحقق بنجاح ✅', 'success');
-      window.location.href = '/';
+      // نعود لنفس الوجهة (رحلة/صفحة) التي جاء منها المستخدم قبل تسجيل الدخول، وليس دائمًا للرئيسية —
+      // الصفحة الوجهة نفسها (مثل pay.js أو trip.js) تتحقق من الملكية وحالة الدفع من السيرفر بشكل مستقل.
+      // ملاحظة مهمة: عنوان هذه الصفحة (صفحة الدخول) يحمل أصلًا نفس الـhash المطلوب العودة إليه —
+      // فتعيين location.href لعنوان يطابق العنوان الحالي حرفيًا يُعامَل من المتصفح كتنقّل داخل نفس
+      // الجزء (fragment navigation) بلا إعادة تحميل فعلية للمستند (سلوك موحّد ومطابق للمواصفة عبر
+      // المتصفحات)، فيبقى المستخدم عالقًا على HTML صفحة الدخول رغم امتلاكه جلسة صالحة الآن. لذا
+      // نفرض تحميلًا فعليًا صريحًا عبر location.reload() في هذه الحالة (الحالة الشائعة)، ونستخدم
+      // location.href فقط عندما تختلف الوجهة عمليًا عن العنوان الحالي.
+      const dest = '/' + returnHash;
+      if (dest === location.pathname + location.hash) {
+        window.location.reload();
+      } else {
+        window.location.href = dest;
+      }
     } catch (e) {
       setMsg('تعذّر الاتصال بالخادم', 'error');
       btn.disabled = false;

@@ -81,7 +81,9 @@ function linkItemHtml(l) {
     </div>`;
 }
 
-function renderLinks(container) {
+// المحتوى الحقيقي لصفحة الروابط — يُستدعى فقط بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود
+// لرحلة بعد أصلًا). renderLinks أدناه هو المسؤول الوحيد عن قرار الفتح/القفل.
+function renderLinksContent(container) {
   const allLinks = store.list('links');
   const links = linksFilter === 'الكل' ? allLinks : allLinks.filter((l) => (l.category || 'أخرى') === linksFilter);
 
@@ -111,7 +113,7 @@ function renderLinks(container) {
   qs('#add-link-btn').addEventListener('click', () => openLinkModal());
 
   qsa('[data-filter]').forEach((btn) => {
-    btn.addEventListener('click', () => { linksFilter = btn.dataset.filter; renderLinks(container); });
+    btn.addEventListener('click', () => { linksFilter = btn.dataset.filter; renderLinksContent(container); });
   });
 
   qs('#links-list').addEventListener('click', (e) => {
@@ -125,9 +127,38 @@ function renderLinks(container) {
       if (confirm('هل تريد حذف هذا الرابط؟')) {
         store.remove('links', id);
         toast('تم الحذف');
-        renderLinks(container);
+        renderLinksContent(container);
       }
     }
+  });
+}
+
+// نقطة الدخول الوحيدة للراوت: الروابط والحجوزات ميزة مدفوعة — تُقفَل فقط عند وجود رحلة محفوظة
+// (fail-closed)؛ بلا trip_id تبقى الصفحة متاحة كأداة عامة (لا رحلة لتقييدها).
+function renderLinks(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderLinksContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'روابط مفيدة وحجوزات', desc: 'تذاكر، حجوزات، تأشيرة وتأمين السفر', iconName: 'link' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderLinksContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'link',
+      title: 'الروابط والحجوزات جزء من خطتك الكاملة',
+      desc: 'افتح خطتك الكاملة لحفظ روابط حجوزاتك وتذاكرك المهمة.',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
   });
 }
 

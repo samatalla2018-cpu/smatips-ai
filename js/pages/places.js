@@ -107,34 +107,39 @@ function placeQuery(p) {
   return [p.name, p.city, p.country].filter(Boolean).join(' ');
 }
 
+// ملاحظة عن الصور: لا تُخزَّن صورة حقيقية لكل مكان (لا يوجد حقل صورة في بيانات المكان) — بدل
+// اختلاق صورة عشوائية قد لا تطابق المكان فعليًا، تستخدم البطاقة رأسًا لونيًا مميّزًا حسب نوع
+// المكان (فندق/مطعم/معلم...) بأيقونة كبيرة، فتبقى "بطاقة كبيرة بصرية" صادقة بدل صورة وهمية.
+// هذه الصفحة بالكامل جزء مدفوع (renderPlaces أدناه يقفلها كاملة قبل الدفع)، فبطاقة المكان هنا
+// تُعرض دائمًا بكل تفاصيلها.
 function placeItemHtml(p) {
   const typeMeta = placeTypeMeta(p.type);
   const openUrl = p.mapsUrl || mapsSearchUrl(placeQuery(p));
   const dirUrl = mapsDirectionsUrl(placeQuery(p));
   const dist = placesDistances[p.id];
   return `
-    <div class="item-card" data-id="${p.id}">
-      <div class="page-header-icon" style="width:38px;height:38px;border-radius:11px;">${icon(typeMeta.icon, 18)}</div>
-      <div style="flex:1; min-width:0;">
-        <div class="item-title">${escapeHtml(p.name)}</div>
-        <div class="item-meta">
+    <div class="place-card" data-id="${p.id}">
+      <div class="place-card-media pt-${typeMeta.id}">${icon(typeMeta.icon, 34)}</div>
+      <div class="item-actions" style="position:absolute; top:12px; inset-inline-end:12px;">
+        <button class="icon-btn btn-sm" style="width:36px;height:36px;background:rgba(255,255,255,.9);" data-action="edit" aria-label="تعديل">${icon('edit', 15)}</button>
+        <button class="icon-btn btn-sm" style="width:36px;height:36px;background:rgba(255,255,255,.9);" data-action="delete" aria-label="حذف">${icon('trash', 15)}</button>
+      </div>
+      <div class="place-card-body">
+        <div class="place-card-name">${escapeHtml(p.name)}</div>
+        <div class="place-card-meta">
           <span class="badge badge-primary">${escapeHtml(typeMeta.label)}</span>
           ${p.city ? `<span class="badge">${escapeHtml(p.city)}</span>` : ''}
           ${p.budget ? `<span class="badge badge-accent">${escapeHtml(p.budget)}</span>` : ''}
           ${p.rating ? `<span class="badge">${'★'.repeat(Number(p.rating))}</span>` : ''}
           ${dist !== undefined ? `<span class="badge badge-success">${dist === null ? 'المسافة غير معروفة' : `${dist.toFixed(1)} كم`}</span>` : ''}
         </div>
-        ${p.notes ? `<div class="text-sm text-muted mt-1">${escapeHtml(p.notes)}</div>` : ''}
-        <div class="flex gap-2 mt-2" style="flex-wrap:wrap;">
+        ${p.notes ? `<div class="place-card-desc">${escapeHtml(p.notes)}</div>` : ''}
+        <div class="place-card-actions">
           <a class="btn btn-outline btn-sm" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer">${icon('map', 14)}<span>فتح على الخريطة</span></a>
           <a class="btn btn-outline btn-sm" href="${escapeHtml(dirUrl)}" target="_blank" rel="noopener noreferrer">${icon('navigation', 14)}<span>الاتجاهات</span></a>
           <button class="btn btn-outline btn-sm" data-action="toggle-embed">${icon('globe', 14)}<span>عرض الخريطة هنا</span></button>
         </div>
         <div class="map-embed-wrap" hidden></div>
-      </div>
-      <div class="item-actions">
-        <button class="icon-btn btn-sm" style="width:32px;height:32px;" data-action="edit" aria-label="تعديل">${icon('edit', 14)}</button>
-        <button class="icon-btn btn-sm" style="width:32px;height:32px;" data-action="delete" aria-label="حذف">${icon('trash', 14)}</button>
       </div>
     </div>`;
 }
@@ -186,7 +191,7 @@ async function activateNearby(container) {
     console.error(err);
     toast('تعذّر الوصول إلى موقعك — تأكد من السماح بإذن الموقع للمتصفح', 'error');
   }
-  renderPlaces(container);
+  renderPlacesContent(container);
 }
 
 function placesListInnerHtml() {
@@ -201,7 +206,10 @@ function renderPlacesList() {
   qs('#places-list').innerHTML = placesListInnerHtml();
 }
 
-function renderPlaces(container) {
+// المحتوى الحقيقي لصفحة الأماكن — يُستدعى فقط بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود
+// لرحلة بعد أصلًا). renderPlaces أدناه هو المسؤول الوحيد عن قرار الفتح/القفل.
+function renderPlacesContent(container) {
+  const trip = store.getTrip();
   const allPlaces = store.list('places');
   const cities = getPlaceCities(allPlaces);
 
@@ -235,16 +243,17 @@ function renderPlaces(container) {
       <button class="chip ${placesNearbyActive ? 'active' : ''}" id="nearby-btn">${icon('navigation', 13)}<span> بالقرب مني</span></button>
     </div>
 
-    <div class="mt-3" id="places-list">${placesListInnerHtml()}</div>
+    <div class="mt-3 place-grid" id="places-list">${placesListInnerHtml()}</div>
   `;
+  if (window.initAnimate) initAnimate(container);
 
   qs('#add-place-btn').addEventListener('click', () => openPlaceModal());
 
   qsa('[data-type-filter]').forEach((btn) => {
-    btn.addEventListener('click', () => { placesTypeFilter = btn.dataset.typeFilter; renderPlaces(container); });
+    btn.addEventListener('click', () => { placesTypeFilter = btn.dataset.typeFilter; renderPlacesContent(container); });
   });
-  qs('#city-filter').addEventListener('change', (e) => { placesCityFilter = e.target.value; renderPlaces(container); });
-  qs('#budget-filter').addEventListener('change', (e) => { placesBudgetFilter = e.target.value; renderPlaces(container); });
+  qs('#city-filter').addEventListener('change', (e) => { placesCityFilter = e.target.value; renderPlacesContent(container); });
+  qs('#budget-filter').addEventListener('change', (e) => { placesBudgetFilter = e.target.value; renderPlacesContent(container); });
   qs('#places-search-input').addEventListener('input', debounce((e) => {
     placesSearchQuery = e.target.value;
     renderPlacesList();
@@ -252,7 +261,7 @@ function renderPlaces(container) {
   qs('#nearby-btn').addEventListener('click', () => {
     if (placesNearbyActive) {
       placesNearbyActive = false;
-      renderPlaces(container);
+      renderPlacesContent(container);
     } else {
       activateNearby(container);
     }
@@ -281,9 +290,38 @@ function renderPlaces(container) {
         store.remove('places', id);
         delete placesDistances[id];
         toast('تم الحذف');
-        renderPlaces(container);
+        renderPlacesContent(container);
       }
     }
+  });
+}
+
+// نقطة الدخول الوحيدة للراوت: تقرر أولًا هل الأماكن والخرائط مفتوحة لهذه الرحلة قبل عرض أي
+// محتوى حقيقي (fail-closed) — بلا trip_id يُعرض المحتوى مباشرة (لا رحلة لتقييدها بعد).
+function renderPlaces(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderPlacesContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'الأماكن والخرائط', desc: 'فنادق، مطاعم، معالم وأنشطة — بروابط خرائط Google حقيقية', iconName: 'map' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderPlacesContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'map',
+      title: 'الأماكن والخرائط جزء من خطتك الكاملة',
+      desc: 'افتح خطتك الكاملة لإضافة أماكنك وفتح تفاصيلها الكاملة وروابط خرائطها.',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
   });
 }
 

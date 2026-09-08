@@ -60,16 +60,27 @@ function forecastDayHtml(dateStr, code, tMax, tMin) {
     </div>`;
 }
 
+// يختار حالة لونية للبطاقة حسب الطقس الفعلي — تُطبَّق كصنف CSS فقط (weather-hero.is-...)، لا
+// تُغيّر أي بيانات، فقط الإحساس البصري ليطابق الجو الحقيقي في الوجهة.
+function weatherMoodClass(code, isDay) {
+  if ([95, 96, 99].includes(code)) return 'is-storm';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'is-snow';
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return 'is-rain';
+  if (code === 3 || code === 45 || code === 48) return 'is-cloudy';
+  return isDay ? 'is-clear-day' : 'is-clear-night';
+}
+
 function weatherHeroHtml(place, cur, todayMax, todayMin) {
   const iconName = weatherIconFor(cur.weather_code, cur.is_day);
+  const moodClass = weatherMoodClass(cur.weather_code, cur.is_day);
   return `
-    <div class="card weather-hero">
+    <div class="card weather-hero ${moodClass}" data-animate>
       <div class="weather-hero-top">
         <div>
           <div class="weather-city">${escapeHtml(place.name)}</div>
           <div class="text-sm text-muted">${escapeHtml(place.country || '')}</div>
         </div>
-        <div class="weather-icon-lg" style="color:var(--info);">${icon(iconName, 56)}</div>
+        <div class="weather-icon-lg" style="color:#fff;">${icon(iconName, 56)}</div>
       </div>
       <div class="weather-temp-row">
         <div class="weather-temp-big">${Math.round(cur.temperature_2m)}°</div>
@@ -122,6 +133,7 @@ async function performWeatherSearch(container, query, statusEl, tripDates) {
       <div class="section-title-row"><h2>توقعات الأيام القادمة</h2></div>
       <div class="grid grid-4">${forecastCards}</div>
     `;
+    if (window.initAnimate) initAnimate(statusEl);
   } catch (err) {
     console.error(err);
     statusEl.innerHTML = emptyState({
@@ -132,7 +144,9 @@ async function performWeatherSearch(container, query, statusEl, tripDates) {
   }
 }
 
-function renderWeather(container) {
+// المحتوى الحقيقي لصفحة الطقس — بحث حر عن أي مدينة + توقعات كاملة لأيام الرحلة. يُستدعى فقط
+// بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود لرحلة بعد أصلًا).
+function renderWeatherContent(container) {
   const trip = store.getTrip();
   const tripDest = trip.city || trip.country || '';
 
@@ -168,6 +182,35 @@ function renderWeather(container) {
       desc: 'اكتب اسم أي مدينة في العالم في مربع البحث أعلاه، أو أضف مدينة وجهتك في بيانات الرحلة لعرضها هنا تلقائيًا.',
     });
   }
+}
+
+// نقطة الدخول الوحيدة للراوت: توقعات أيام الرحلة الكاملة ميزة مدفوعة — تُقفَل فقط عند وجود
+// رحلة محفوظة (fail-closed)؛ بلا trip_id تبقى أداة البحث العامة متاحة كما هي (لا رحلة لتقييدها).
+function renderWeather(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderWeatherContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'الطقس', desc: 'طقس وجهتك وتوقعات أيام رحلتك', iconName: 'cloud' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderWeatherContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'cloud',
+      title: 'طقس رحلتك الكامل جزء من خطتك',
+      desc: 'افتح خطتك الكاملة لمشاهدة توقعات الطقس لكل أيام رحلتك — طقس اليوم متاح للمعاينة من صفحة "رحلتي".',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
+  });
 }
 
 registerRoute('/weather', renderWeather);

@@ -3,6 +3,7 @@
 // (Server / Environment Variables) فلا يجب أن يظهر أي مفتاح API أو إعداد تقني هنا أبدًا.
 
 const ASSISTANT_WELCOME = 'أهلاً بك! كيف أقدر أساعدك في رحلتك اليوم؟';
+const ASSISTANT_PROMPTS = ['وين أروح اليوم؟', 'وش أفضل مطعم قريب؟', 'وش أسوي لو تغيّر الجو؟'];
 
 let assistantMessages = [];
 let assistantBusy = false;
@@ -47,7 +48,7 @@ async function sendChatMessage(text) {
   renderChatMessages();
 }
 
-function renderAssistant(container) {
+function renderAssistantChat(container) {
   assistantMessages = [{ role: 'assistant', content: ASSISTANT_WELCOME }];
 
   container.innerHTML = `
@@ -56,8 +57,11 @@ function renderAssistant(container) {
       desc: 'اسألني عن رحلتك، جدولك، الطقس، الأماكن أو أي تفاصيل تساعدك أثناء السفر.',
       iconName: 'sparkle',
     })}
-    <div class="card" style="padding:12px; display:flex; flex-direction:column; height:65vh;">
+    <div class="card assistant-chat-card" style="padding:12px; display:flex; flex-direction:column;">
       <div id="chat-messages" class="chat-messages"></div>
+      <div class="concierge-chips">
+        ${ASSISTANT_PROMPTS.map((p) => `<button type="button" class="concierge-chip" data-prompt="${escapeHtml(p)}">${escapeHtml(p)}</button>`).join('')}
+      </div>
       <form id="chat-form" class="chat-input-row">
         <textarea id="chat-input" rows="1" placeholder="اكتب رسالتك هنا..." autocomplete="off"></textarea>
         <button type="submit" class="btn btn-primary" style="height:44px;" id="chat-send-btn" aria-label="إرسال">${icon('navigation', 17)}</button>
@@ -81,6 +85,57 @@ function renderAssistant(container) {
     if (!text || assistantBusy) return;
     input.value = '';
     sendChatMessage(text);
+  });
+
+  // الرقاقات تملأ صندوق الكتابة فقط للمراجعة قبل الإرسال — لا تُرسل تلقائيًا
+  qsa('.concierge-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      input.value = chip.dataset.prompt;
+      input.focus();
+    });
+  });
+}
+
+// المساعد الذكي ميزة مدفوعة — قبل التحقق من حالة الدفع نعرض حالة مقفلة افتراضيًا (fail-closed)
+// بدل فتح المحادثة أولًا ثم قفلها لاحقًا. القرار الحقيقي الوحيد يأتي من getTripAccess (GET
+// /api/trips)، بنفس مصدر التحقق المستخدم في بقية الصفحات — لا منطق دفع جديد هنا.
+function assistantLockedHtml(trip) {
+  return `
+    ${pageHeader({
+      title: 'مساعد السفر الذكي',
+      desc: 'اسألني عن رحلتك، جدولك، الطقس، الأماكن أو أي تفاصيل تساعدك أثناء السفر.',
+      iconName: 'sparkle',
+    })}
+    ${lockedFeatureHtml({
+      iconName: 'sparkle',
+      title: 'مساعد السفر الذكي جزء من خطتك الكاملة',
+      desc: 'افتح خطتك الكاملة لتسأل مساعد السفر عن جدولك وأماكنك وأي تفصيل في رحلتك.',
+      tripId: trip.id,
+    })}
+  `;
+}
+
+function renderAssistant(container) {
+  const trip = store.getTrip();
+
+  if (!trip.id) {
+    container.innerHTML = `
+      ${pageHeader({ title: 'مساعد السفر الذكي', desc: 'اسألني عن رحلتك بعد إنشائها.', iconName: 'sparkle' })}
+      ${emptyState({
+        iconName: 'passport',
+        title: 'أنشئ رحلتك أولًا',
+        desc: 'مساعد السفر الذكي يصبح متاحًا بعد إنشاء رحلتك وفتح خطتها الكاملة.',
+      })}
+      <div class="mt-3"><a class="btn btn-primary" href="#/trip">${icon('sparkle', 16)}<span>أنشئ خطتي</span></a></div>
+    `;
+    return;
+  }
+
+  container.innerHTML = assistantLockedHtml(trip);
+  if (window.initAnimate) initAnimate(container);
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) renderAssistantChat(container);
   });
 }
 

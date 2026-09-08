@@ -24,5 +24,60 @@ function emptyState({ iconName = 'info', title, desc, actionLabel, actionAttrs =
     </div>`;
 }
 
+// بطاقة الدفع القياسية (Paywall) — نفس النسخة والتصميم أينما ظهرت (معاينة الرحلة، الجدول،
+// الأماكن، الطقس...) حتى تكون رسالة "69 ريال لكل رحلة" واحدة ومتّسقة في كل الموقع. الزر يوجّه
+// فقط إلى صفحة الدفع الموجودة (js/pages/pay.js) — لا يبدأ أي عملية دفع من هنا مباشرة.
+function paywallCardHtml(tripId) {
+  return `
+    <div class="paywall-card" data-animate>
+      <div class="paywall-icon">${icon('sparkle', 24)}</div>
+      <h3>رحلتك جاهزة</h3>
+      <p>افتح خطتك الكاملة بـ 69 ريال وانطلق بكل التفاصيل بين يديك</p>
+      <div class="paywall-price">69<span> ريال للرحلة</span></div>
+      <div class="paywall-price-note">دفعة واحدة لهذه الرحلة — بدون اشتراك</div>
+      <a class="btn btn-pill btn-accent btn-block mt-2" href="#/pay?trip=${encodeURIComponent(tripId)}">${icon('wallet', 18)}<span>افتح رحلتي كاملة — 69 ريال</span></a>
+      <ul class="paywall-unlocks">
+        <li>${icon('check', 14)}<span>الجدول اليومي الكامل لجميع الأيام</span></li>
+        <li>${icon('check', 14)}<span>جميع الأماكن والتوصيات</span></li>
+        <li>${icon('check', 14)}<span>الطقس وتوقعات أيام الرحلة</span></li>
+        <li>${icon('check', 14)}<span>المساعد الذكي للسفر</span></li>
+        <li>${icon('check', 14)}<span>قائمة المهام</span></li>
+        <li>${icon('check', 14)}<span>قائمة تجهيز الأغراض</span></li>
+        <li>${icon('check', 14)}<span>العملات والمقابس والمعلومات المهمة</span></li>
+        <li>${icon('check', 14)}<span>الروابط والحجوزات</span></li>
+        <li>${icon('check', 14)}<span>حفظ الرحلة وتصديرها PDF</span></li>
+      </ul>
+    </div>`;
+}
+
+// شاشة قفل موحّدة لأي صفحة/قسم مدفوع بالكامل — تُستخدم في كل الأقسام التي تتحقق من
+// getTripAccess (الجدول، الأماكن، الطقس، المهام، الأغراض، الروابط، العملات، المقابس، الخدمات).
+// نفس بطاقة الـPaywall أعلاه، فوق رسالة قصيرة توضّح أن هذا القسم جزء من الخطة الكاملة — لا محتوى
+// حقيقي يُعرض هنا أبدًا قبل تأكيد الدفع من السيرفر.
+function lockedFeatureHtml({ iconName, title, desc, tripId }) {
+  return `
+    <div class="card" style="text-align:center; padding:36px 20px;" data-animate>
+      <div class="page-header-icon" style="width:52px;height:52px;border-radius:16px;margin:0 auto 14px;">${icon(iconName, 24)}</div>
+      <h3 style="font-size:16.5px; margin-bottom:6px;">${escapeHtml(title)}</h3>
+      <p class="text-sm text-muted" style="max-width:380px; margin:0 auto;">${escapeHtml(desc)}</p>
+    </div>
+    ${paywallCardHtml(tripId)}
+  `;
+}
+
+// صف مدمج لبقية الأيام المقفلة — عدد فقط بدل بطاقة منفصلة لكل يوم (يُستخدم في معاينة الرحلة
+// المجانية أسفل يوم رحلتك الأول)
+function lockedDaysListHtml(days) {
+  if (!days.length) return '';
+  return `
+    <div class="locked-list-row" data-animate>
+      ${icon('shield', 15)}
+      <span>+${days.length} ${days.length === 1 ? 'يوم آخر مقفل' : 'أيام أخرى مقفلة'} — تُفتح فور الدفع</span>
+    </div>`;
+}
+
 window.pageHeader = pageHeader;
 window.emptyState = emptyState;
+window.paywallCardHtml = paywallCardHtml;
+window.lockedFeatureHtml = lockedFeatureHtml;
+window.lockedDaysListHtml = lockedDaysListHtml;

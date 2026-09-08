@@ -113,8 +113,9 @@ async function downloadTripFile(id, title) {
   const res = await fetch(`/api/trips/${id}`, { credentials: 'same-origin' });
   if (!res.ok) {
     if (res.status === 403) {
-      toast('هذه الرحلة تحتاج دفع 69 ريال أولًا', 'error');
-      navigate(`/pay?trip=${encodeURIComponent(id)}`);
+      // نفس بطاقة الدفع القياسية (paywallCardHtml) داخل نافذة منبثقة — أنيق بدل توست + تحويل صامت،
+      // والقرار الفعلي "مقفلة أم لا" جاء من هذا الطلب نفسه (السيرفر عبر isTripUnlocked)، لا من الواجهة.
+      openModal('افتح خطتك الكاملة', paywallCardHtml(id));
     } else {
       toast('تعذّر تنزيل الملف', 'error');
     }

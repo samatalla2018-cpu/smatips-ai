@@ -1,6 +1,8 @@
 // صفحة أنواع المقابس الكهربائية
 
-function renderPlugs(container) {
+// المحتوى الحقيقي لصفحة المقابس — يُستدعى فقط بعد تأكيد أن الرحلة مفتوحة فعليًا (أو لا وجود
+// لرحلة بعد أصلًا). renderPlugs أدناه هو المسؤول الوحيد عن قرار الفتح/القفل.
+function renderPlugsContent(container) {
   const trip = store.getTrip();
   const info = trip.country ? PLUG_REFERENCE[trip.country] : null;
 
@@ -50,8 +52,37 @@ function renderPlugs(container) {
   qsa('[data-country]').forEach((btn) => {
     btn.addEventListener('click', () => {
       store.updateTrip({ country: btn.dataset.country });
-      renderPlugs(container);
+      renderPlugsContent(container);
     });
+  });
+}
+
+// نقطة الدخول الوحيدة للراوت: مرجع المقابس ميزة مدفوعة — تُقفَل فقط عند وجود رحلة محفوظة
+// (fail-closed)؛ بلا trip_id تبقى الصفحة متاحة كأداة عامة (لا رحلة لتقييدها).
+function renderPlugs(container) {
+  const trip = store.getTrip();
+  if (!trip.id) {
+    renderPlugsContent(container);
+    return;
+  }
+
+  container.innerHTML = `
+    ${pageHeader({ title: 'المقابس الكهربائية', desc: 'نوع المقبس والفولتية في بلد الوجهة', iconName: 'plug' })}
+    <div class="flex items-center gap-2 text-sm text-muted" style="padding:20px 0;"><span class="spinner"></span><span>جارٍ التحقق من صلاحيتك...</span></div>
+  `;
+
+  getTripAccess(trip.id).then((access) => {
+    if (access.unlocked) {
+      renderPlugsContent(container);
+      return;
+    }
+    container.innerHTML = lockedFeatureHtml({
+      iconName: 'plug',
+      title: 'معلومات المقابس جزء من خطتك الكاملة',
+      desc: 'افتح خطتك الكاملة لمعرفة نوع المقبس والفولتية في وجهتك.',
+      tripId: trip.id,
+    });
+    if (window.initAnimate) initAnimate(container);
   });
 }
 
