@@ -661,8 +661,8 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   position: absolute; inset: 0;
   z-index: -1;
   background:
-    linear-gradient(0deg, rgba(10, 23, 48, .88) 0%, rgba(10, 23, 48, .38) 58%, rgba(10, 23, 48, .08) 100%),
-    linear-gradient(100deg, color-mix(in srgb, var(--navy) 42%, transparent) 0%, transparent 55%);
+    linear-gradient(0deg, rgba(10, 23, 48, .62) 0%, rgba(10, 23, 48, .22) 52%, rgba(10, 23, 48, .04) 100%),
+    linear-gradient(100deg, color-mix(in srgb, var(--navy) 24%, transparent) 0%, transparent 50%);
 }
 /* حالة احتياطية (بلا وجهة محدَّدة بعد): نفس تدرّج الشفافية أعلاه بالضبط حتى تبقى صورة الخلفية
    ظاهرة بوضوح تحته (خلل سابق كان يجعل هذا التدرّج معتمًا بالكامل فيغطي الصورة كليًا). */
