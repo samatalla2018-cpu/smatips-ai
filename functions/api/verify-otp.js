@@ -23,7 +23,15 @@ export async function onRequestPost({ request, env }) {
   const ip = getClientIp(request);
 
   // يمنع تخمين رمز التحقق بالمحاولات المتكررة — يُطبَّق قبل حتى الاتصال بالمزوّد.
-  if (await isOtpVerifyRateLimited(env.DB, phone)) {
+  // (بلا try/catch سابقًا: عطل D1 هنا كان استثناءً غير مُعالَج بلا استجابة JSON واضحة.)
+  let rateLimited;
+  try {
+    rateLimited = await isOtpVerifyRateLimited(env.DB, phone);
+  } catch {
+    await logEvent('otp_verify_rate_limit_check_failed', { phone });
+    return jsonResponse({ error: 'تعذّر التحقق من محاولاتك، حاول مرة أخرى' }, 503);
+  }
+  if (rateLimited) {
     await logEvent('otp_verify_rate_limited', { phone });
     return jsonResponse({ error: 'محاولات كثيرة جدًا، أعد إرسال الرمز وحاول لاحقًا' }, 429);
   }
@@ -34,14 +42,25 @@ export async function onRequestPost({ request, env }) {
   // أي استجابة غامضة أو ناقصة أو خطأ شبكة/مهلة أو حالة HTTP غير متوقعة = رفض، دون استثناء.
   const verified = isOtpVerificationSuccessful(ok, data);
 
-  await recordOtpVerifyAttempt(env.DB, phone, ip, verified);
+  try {
+    await recordOtpVerifyAttempt(env.DB, phone, ip, verified);
+  } catch {
+    // فشل تسجيل المحاولة إحصائيًا فقط لا يجب أن يحوّل نتيجة تحقق حقيقية إلى استثناء غير مُعالَج —
+    // القرار (verified) اتُّخذ بالفعل من رد المزوّد نفسه، وهذا السطر لا يغيّره في أي اتجاه.
+    await logEvent('otp_verify_attempt_record_failed', { phone });
+  }
 
   if (!verified) {
     await logEvent('otp_verify_failed', { phone, httpOk: ok, networkError, hadDataObject: !!data });
     return jsonResponse({ error: data?.message || 'رمز التحقق غير صحيح' }, 401);
   }
 
-  await ensureUserAndSubscription(env.DB, phone);
+  try {
+    await ensureUserAndSubscription(env.DB, phone);
+  } catch {
+    await logEvent('otp_verify_ensure_user_failed', { phone });
+    return jsonResponse({ error: 'تعذّر إكمال تسجيل الدخول، حاول مرة أخرى' }, 503);
+  }
 
   const token = await createSessionToken(env.SESSION_SECRET, phone);
   await logEvent('otp_verify_success_session_created', { phone });

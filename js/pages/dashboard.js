@@ -3,34 +3,43 @@
 const DESTINATION_IDEAS = [
   { name: 'إسطنبول', country: 'تركيا', img: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=500&auto=format&fit=crop' },
   { name: 'سانتوريني', country: 'اليونان', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=500&auto=format&fit=crop' },
-  { name: 'جزر المالديف', country: 'المالديف', img: 'https://images.unsplash.com/photo-1512100356356-de1b84283e18?q=80&w=500&auto=format&fit=crop' },
+  { name: 'جزر المالديف', country: 'المالديف', img: '/assets/hero/maldives-default.jpg' },
   { name: 'باريس', country: 'فرنسا', img: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=500&auto=format&fit=crop' },
   { name: 'أجرا', country: 'الهند', img: 'https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=500&auto=format&fit=crop' },
   { name: 'البندقية', country: 'إيطاليا', img: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?q=80&w=500&auto=format&fit=crop' },
 ];
 
-function tripSummaryCard(trip) {
-  const hasTrip = trip.country || trip.city || trip.startDate;
-  // نظام الوجهة الديناميكية (js/destinations.js): يختار صورة وجو بصري مناسبَين لوجهة المستخدم
-  // تلقائيًا — تزيين بصري بحت، لا علاقة له بحالة الدفع أو أي صلاحية.
-  const theme = getDestinationTheme(trip);
+// ---------- Hero (مرحلة الإلهام — قبل وجود أي رحلة) ----------
+// صورة ثابتة واحدة قوية (المالديف) بدل شرائح متبدّلة — بطلب صريح: صورة Premium ثابتة أوضح
+// وأقوى بصريًا من تبديل/حركة قد تُضعف التصميم. من نفس مصدر صور الوجهات الموجود مسبقًا
+// (js/destinations.js DESTINATION_THEMES) — لا خدمة صور جديدة، فقط حجم أكبر (w=1920) يناسب
+// صورة وحيدة تحمل كل ثقل الـHero بدل عدة صور متوسطة الحجم.
+function heroSlideUrl(baseUrl) {
+  return baseUrl.replace(/([?&])w=\d+/, `$1w=1920`);
+}
 
-  if (!hasTrip) {
-    return `
-      <div class="hero-banner is-fallback" data-animate>
-        <img class="hero-banner-img" src="${theme.heroImage}" alt="" loading="eager" />
-        <div class="hero-banner-scrim"></div>
-        <div class="hero-banner-content">
-          <span class="hero-eyebrow">${icon('sparkle', 15)}<span>مساعدك الذكي قبل السفر وأثناءه</span></span>
-          <h2>وين نروح هالمرة؟ خلّنا نرتبها سوا</h2>
-          <p class="hero-desc">جدولك اليومي، مهامك، أغراض السفر، الطقس والعملات… كل تفاصيل رحلتك القادمة في مكان واحد، تحسّها وكأنك بدأت فيها بالفعل.</p>
-          <div class="hero-actions">
-            <a href="#/trip" class="btn btn-pill btn-accent">${icon('plus', 18)}<span>ابدأ تخطيط رحلتي</span></a>
-          </div>
+function inspirationHeroHtml() {
+  return `
+    <div class="mega-hero" data-animate>
+      <img class="mega-hero-img" src="${heroSlideUrl(DESTINATION_THEMES.maldives.heroImage)}" alt="" loading="eager" fetchpriority="high" />
+      <div class="mega-hero-scrim"></div>
+      <div class="mega-hero-content">
+        <h1>رحلتك تبدأ من هنا</h1>
+        <p>خطط رحلتك بذكاء، وخلي SmaTrips يرتب لك التفاصيل.</p>
+        <a href="#/trip" class="btn btn-pill btn-accent">${icon('sparkle', 18)}<span>ابدأ التخطيط الآن</span></a>
+        <div class="mega-hero-chips">
+          <span class="mega-hero-chip">${icon('sparkle', 13)}<span>خطتك بالذكاء الاصطناعي</span></span>
+          <span class="mega-hero-chip">${icon('layers', 13)}<span>كل تفاصيل رحلتك في مكان واحد</span></span>
         </div>
-      </div>`;
-  }
+      </div>
+    </div>`;
+}
 
+// ---------- Hero الشخصي (بعد اختيار وجهة/تواريخ) — نفس بيانات الرحلة الحقيقية كما كانت تمامًا ----------
+function personalizedHeroHtml(trip) {
+  // نظام الوجهة الديناميكية (js/destinations.js): يختار صورة وجو بصري مناسبَين لوجهة المستخدم
+  // تلقائيًا — تزيين بصري بحت، لا علاقة له بحالة الدفع أو أي صلاحية. لا بيانات طقس/أرقام وهمية هنا.
+  const theme = getDestinationTheme(trip);
   const days = daysBetween(trip.startDate, trip.endDate);
   const dest = [trip.city, trip.country].filter(Boolean).join('، ');
   const tasks = store.list('tasks');
@@ -46,16 +55,17 @@ function tripSummaryCard(trip) {
   const eyebrow = theme.key || theme.region ? theme.mood : (trip.tripType || 'رحلتك القادمة');
 
   return `
-    <div class="hero-banner${theme.isFallback ? ' is-fallback' : ''}" data-animate>
-      <img class="hero-banner-img" src="${theme.heroImage}" alt="" loading="eager" />
-      <div class="hero-banner-scrim"></div>
+    <div class="mega-hero mega-hero-personal${theme.isFallback ? ' is-fallback' : ''}" data-animate>
+      <img class="mega-hero-img" src="${heroSlideUrl(theme.heroImage)}" alt="" loading="eager" fetchpriority="high" />
+      <div class="mega-hero-scrim"></div>
       <a href="#/trip" class="hero-edit-btn" aria-label="تعديل بيانات الرحلة">${icon('edit', 16)}</a>
-      <div class="hero-banner-content">
-        <span class="hero-eyebrow">${icon('passport', 15)}<span>${escapeHtml(eyebrow)}</span></span>
-        <h2>${escapeHtml(title)}</h2>
+      <div class="mega-hero-content">
+        <span class="mega-hero-dest-tag">${icon('passport', 13)}<span>${escapeHtml(eyebrow)}</span></span>
+        <h1>${escapeHtml(title)}</h1>
         ${dest ? `<div class="hero-meta">${icon('map', 15)}<span>${escapeHtml(dest)}</span></div>` : ''}
         ${trip.startDate ? `<div class="hero-meta">${icon('calendar', 15)}<span>${formatDateAr(trip.startDate)} ${trip.endDate ? '← ' + formatDateAr(trip.endDate) : ''}${days ? ` · ${days} ${days === 1 ? 'يوم' : 'أيام'}` : ''}</span></div>` : ''}
-        <p class="hero-desc">جاهز لمغامرتك القادمة؟</p>
+        <div class="hero-meta">${icon('suitcase', 15)}<span>${trip.travelers || 1} ${(trip.travelers || 1) === 1 ? 'مسافر' : 'مسافرين'}</span></div>
+        ${trip.budget ? `<div class="hero-meta">${icon('wallet', 15)}<span>${money(trip.budget)} ${escapeHtml(trip.currency || '')}</span></div>` : ''}
 
         <div class="hero-stats">
           <div class="hero-stat"><b>${doneTasks}/${tasks.length}</b><span>مهام منجزة</span></div>
@@ -64,6 +74,11 @@ function tripSummaryCard(trip) {
         </div>
       </div>
     </div>`;
+}
+
+function tripSummaryCard(trip) {
+  const hasTrip = trip.country || trip.city || trip.startDate;
+  return hasTrip ? personalizedHeroHtml(trip) : inspirationHeroHtml();
 }
 
 // أزرار وصول سريع مضغوطة (٤ فقط) لأكثر أقسام الرحلة استخدامًا — تظهر أسفل البطاقة الرئيسية

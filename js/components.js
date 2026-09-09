@@ -25,17 +25,24 @@ function emptyState({ iconName = 'info', title, desc, actionLabel, actionAttrs =
 }
 
 // بطاقة الدفع القياسية (Paywall) — نفس النسخة والتصميم أينما ظهرت (معاينة الرحلة، الجدول،
-// الأماكن، الطقس...) حتى تكون رسالة "69 ريال لكل رحلة" واحدة ومتّسقة في كل الموقع. الزر يوجّه
-// فقط إلى صفحة الدفع الموجودة (js/pages/pay.js) — لا يبدأ أي عملية دفع من هنا مباشرة.
+// الأماكن، الطقس...) حتى تكون رسالة السعر واحدة ومتّسقة في كل الموقع. السعر يأتي دائمًا من
+// window.PRICING (مصدره النهائي env.SUBSCRIPTION_PRICE_SAR/env.REGULAR_PRICE_SAR على الخادم —
+// راجع js/price.js)، وليس رقمًا مكتوبًا هنا. الزر يوجّه فقط إلى صفحة الدفع الموجودة
+// (js/pages/pay.js) — لا يبدأ أي عملية دفع من هنا مباشرة.
 function paywallCardHtml(tripId) {
+  const price = window.PRICING.price_sar;
+  const regularPrice = window.PRICING.regular_price_sar;
+  const hasOffer = regularPrice && regularPrice > price;
   return `
     <div class="paywall-card" data-animate>
       <div class="paywall-icon">${icon('sparkle', 24)}</div>
       <h3>رحلتك جاهزة</h3>
-      <p>افتح خطتك الكاملة بـ 69 ريال وانطلق بكل التفاصيل بين يديك</p>
-      <div class="paywall-price">69<span> ريال للرحلة</span></div>
+      <p>افتح خطتك الكاملة وانطلق بكل التفاصيل بين يديك</p>
+      ${hasOffer ? `<div class="text-sm text-muted" style="text-decoration:line-through;margin-top:14px;">${regularPrice} ر.س</div>` : ''}
+      <div class="paywall-price">${price}<span> ريال للرحلة</span></div>
+      ${hasOffer ? `<div class="badge badge-accent" style="margin-top:2px;">عرض الافتتاح لفترة محدودة</div>` : ''}
       <div class="paywall-price-note">دفعة واحدة لهذه الرحلة — بدون اشتراك</div>
-      <a class="btn btn-pill btn-accent btn-block mt-2" href="#/pay?trip=${encodeURIComponent(tripId)}">${icon('wallet', 18)}<span>افتح رحلتي كاملة — 69 ريال</span></a>
+      <a class="btn btn-pill btn-accent btn-block mt-2" href="#/pay?trip=${encodeURIComponent(tripId)}">${icon('wallet', 18)}<span>افتح رحلتي كاملة — ${price} ر.س</span></a>
       <ul class="paywall-unlocks">
         <li>${icon('check', 14)}<span>الجدول اليومي الكامل لجميع الأيام</span></li>
         <li>${icon('check', 14)}<span>جميع الأماكن والتوصيات</span></li>

@@ -20,12 +20,27 @@ export async function onRequestPost({ request, env }) {
 
   // نمنع الإرسال المتكرر قبل استدعاء المزوّد — يحمي من استنزاف رصيد الرسائل ومن استخدام
   // نقطة الإرسال كأداة إزعاج (SMS bombing) لرقم لا يملكه المستخدم.
-  if (await isOtpSendRateLimited(env.DB, phone, ip)) {
+  // كلا استدعائي D1 هنا كانا بلا try/catch: أي عطل في القاعدة (جدول غير موجود، اتصال منقطع...)
+  // كان يتحوّل إلى استثناء غير مُعالَج يخرج من هذه الدالة بلا استجابة JSON واضحة — قد يظهر للمتصفح
+  // كطلب "معلّق" بلا نتيجة بدل خطأ صريح. الآن يفشل الطلب بأمان (503) برسالة واضحة دائمًا.
+  let rateLimited;
+  try {
+    rateLimited = await isOtpSendRateLimited(env.DB, phone, ip);
+  } catch {
+    await logEvent('otp_send_rate_limit_check_failed', { phone });
+    return jsonResponse({ error: 'تعذّر التحقق من محاولات الإرسال، حاول مرة أخرى' }, 503);
+  }
+  if (rateLimited) {
     await logEvent('otp_send_rate_limited', { phone });
     return jsonResponse({ error: 'محاولات كثيرة جدًا، حاول لاحقًا' }, 429);
   }
 
-  await recordOtpSendAttempt(env.DB, phone, ip);
+  try {
+    await recordOtpSendAttempt(env.DB, phone, ip);
+  } catch {
+    await logEvent('otp_send_attempt_record_failed', { phone });
+    return jsonResponse({ error: 'تعذّر إرسال رمز التحقق، حاول مرة أخرى' }, 503);
+  }
 
   const { ok, data, networkError } = await sendOtpViaAuthentica(env.AUTHENTICA_API_KEY, phone);
   if (!ok) {

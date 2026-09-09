@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>مراجعة التحويلات البنكية — SmaTrips AI</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css" />
+<style>
+  /*
+    هذه صفحة إدارية مستقلة عن الـSPA الرئيسي (ليست جزءًا من index.html/js/app.js) — لا تُحمَّل ولا
+    تُنفَّذ لأي زائر عادي؛ ولا تحمي نفسها بإخفاء الرابط، بل كل استدعاء بيانات هنا يمر عبر
+    requireAdmin() على الخادم (functions/_utils.js) بشكل مستقل عن وجود/عدم وجود هذه الصفحة.
+    تُعيد استخدام رموز الألوان والخطوط والمكوّنات (.btn/.card/.field/.badge) من css/styles.css
+    نفسه حتى تبقى متّسقة بصريًا مع هوية SmaTrips AI دون تكرار تصميم منفصل.
+  */
+  body{background:var(--bg);min-height:100vh;padding:20px 14px 60px;max-width:980px;margin:0 auto;}
+  .admin-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+  .admin-header h1{font-size:19px;margin:0;}
+  .admin-header .sub{font-size:12.5px;color:var(--text-muted);margin-top:2px;}
+  .tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px;}
+  .tab-btn{flex-shrink:0;height:38px;padding:0 16px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer;}
+  .tab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .req-card{margin-bottom:12px;}
+  .req-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+  .req-order{font-weight:800;font-size:14.5px;}
+  .req-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin:12px 0;font-size:13px;}
+  @media (max-width:520px){.req-grid{grid-template-columns:1fr;}}
+  .req-grid dt{color:var(--text-muted);font-weight:700;font-size:11.5px;margin-bottom:2px;}
+  .req-grid dd{margin:0;font-weight:600;}
+  .req-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .center-box{max-width:380px;margin:60px auto;text-align:center;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+  <div id="login-view" class="center-box card" style="padding:28px 24px;">
+    <h1 style="font-size:18px;margin-bottom:4px;">دخول الإدارة</h1>
+    <p class="text-sm text-muted" style="margin-bottom:18px;">سجّل دخولك برقم جوالك المصرَّح له بالإدارة — نفس رمز التحقق عبر SMS المستخدم في الموقع.</p>
+    <div class="field" id="admin-phone-step">
+      <label>رقم الجوال</label>
+      <input type="tel" id="admin-phone-input" placeholder="9665XXXXXXXX" autocomplete="off" inputmode="tel" />
+    </div>
+    <div class="field" id="admin-otp-step" hidden>
+      <label>رمز التحقق (SMS)</label>
+      <input type="text" id="admin-otp-input" placeholder="أدخل الرمز" autocomplete="off" inputmode="numeric" />
+    </div>
+    <button type="button" class="btn btn-primary btn-block mt-2" id="admin-action-btn">إرسال رمز التحقق</button>
+    <div id="admin-login-msg" class="text-sm" style="margin-top:10px;min-height:18px;"></div>
+  </div>
+
+  <div id="denied-view" class="center-box card hidden" style="padding:28px 24px;">
+    <h1 style="font-size:18px;margin-bottom:6px;">ليست لديك صلاحية</h1>
+    <p class="text-sm text-muted">هذا الرقم غير مصرَّح له بالوصول إلى لوحة المراجعة.</p>
+  </div>
+
+  <div id="dashboard-view" class="hidden">
+    <div class="admin-header">
+      <div>
+        <h1>مراجعة التحويلات البنكية</h1>
+        <div class="sub">اعتماد أو رفض طلبات التحويل — كل اعتماد يفتح رحلة واحدة (trip_id) فقط.</div>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-status="under_review">بانتظار المراجعة</button>
+      <button class="tab-btn" data-status="paid">معتمدة</button>
+      <button class="tab-btn" data-status="rejected">مرفوضة</button>
+      <button class="tab-btn" data-status="">الكل</button>
+    </div>
+
+    <div id="req-list"></div>
+  </div>
+
+<script>
+  const qs = (s, r = document) => r.querySelector(s);
+
+  // fetch بلا أي مهلة زمنية على المتصفح يمكن أن يبقى معلَّقًا إلى الأبد إن لم يصل رد من الخادم
+  // إطلاقًا (عطل شبكة، خادم تطوير محلي متجمّد...) — هذا ما كان يُبقي زر "إرسال رمز التحقق" عالقًا
+  // على "جارٍ الإرسال..." بلا أي نتيجة. كل استدعاء OTP هنا الآن محدود بمهلة صريحة (15 ثانية) عبر
+  // AbortController، فيرث دائمًا خطأ واضحًا يُعاد معه الزر لحالته الطبيعية بدل الانتظار إلى الأبد.
+  async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+  }
+  function fmtDate(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+  const STATUS_LABEL = { pending: 'بانتظار التحويل', under_review: 'بانتظار المراجعة', paid: 'مدفوع / معتمد', rejected: 'مرفوض — يحتاج إعادة رفع الإيصال' };
+  const STATUS_BADGE = { pending: 'badge-info', under_review: 'badge-accent', paid: 'badge-success', rejected: 'badge-danger' };
+
+  // ---- تسجيل الدخول (OTP) — نفس /api/send-otp و/api/verify-otp الحاليتين تمامًا، بلا أي تعديل ----
+  let phase = 'phone';
+  let currentPhone = '';
+
+  async function sendCode() {
+    const phone = qs('#admin-phone-input').value.trim();
+    const msg = qs('#admin-login-msg');
+    if (!phone) { msg.textContent = 'أدخل رقم الجوال'; msg.style.color = 'var(--danger)'; return; }
+    const btn = qs('#admin-action-btn');
+    btn.disabled = true; btn.textContent = 'جارٍ الإرسال...';
+    try {
+      const res = await fetchWithTimeout('/api/send-otp', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { msg.textContent = data.error || 'تعذّر إرسال الرمز'; msg.style.color = 'var(--danger)'; btn.disabled = false; btn.textContent = 'إرسال رمز التحقق'; return; }
+      currentPhone = phone; phase = 'otp';
+      qs('#admin-phone-step').hidden = true;
+      qs('#admin-otp-step').hidden = false;
+      btn.textContent = 'تحقق ودخول'; btn.disabled = false;
+      msg.textContent = 'تم إرسال الرمز إلى جوالك'; msg.style.color = 'var(--success)';
+    } catch (e) {
+      msg.textContent = e?.name === 'AbortError' ? 'انتهت المهلة قبل رد الخادم، حاول مرة أخرى' : 'تعذّر الاتصال بالخادم';
+      msg.style.color = 'var(--danger)';
+      btn.disabled = false; btn.textContent = 'إرسال رمز التحقق';
+    }
+  }
+
+  async function verifyCode() {
+    const otp = qs('#admin-otp-input').value.trim();
+    const msg = qs('#admin-login-msg');
+    if (!otp) { msg.textContent = 'أدخل رمز التحقق'; msg.style.color = 'var(--danger)'; return; }
+    const btn = qs('#admin-action-btn');
+    btn.disabled = true; btn.textContent = 'جارٍ التحقق...';
+    try {
+      const res = await fetchWithTimeout('/api/verify-otp', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: currentPhone, otp }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { msg.textContent = data.error || 'رمز غير صحيح'; msg.style.color = 'var(--danger)'; btn.disabled = false; btn.textContent = 'تحقق ودخول'; return; }
+      await boot();
+    } catch (e) {
+      msg.textContent = e?.name === 'AbortError' ? 'انتهت المهلة قبل رد الخادم، حاول مرة أخرى' : 'تعذّر الاتصال بالخادم';
+      msg.style.color = 'var(--danger)';
+      btn.disabled = false; btn.textContent = 'تحقق ودخول';
+    }
+  }
+
+  qs('#admin-action-btn').addEventListener('click', () => (phase === 'phone' ? sendCode() : verifyCode()));
+
+  // ---- لوحة المراجعة ----
+  let currentTab = 'under_review';
+
+  async function loadRequests() {
+    const list = qs('#req-list');
+    list.innerHTML = `<div class="flex items-center gap-2 text-sm text-muted" style="justify-content:center;padding:24px 0;"><span class="spinner"></span><span>جارٍ التحميل...</span></div>`;
+    const url = currentTab ? `/api/payment/bank-transfer/admin/list?status=${encodeURIComponent(currentTab)}` : '/api/payment/bank-transfer/admin/list';
+    let data;
+    try {
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (res.status === 401 || res.status === 403) { showDenied(); return; }
+      data = await res.json();
+    } catch {
+      list.innerHTML = `<div class="text-sm text-muted" style="text-align:center;padding:20px 0;">تعذّر تحميل الطلبات.</div>`;
+      return;
+    }
+    renderRequests(data.requests || []);
+  }
+
+  function renderRequests(requests) {
+    const list = qs('#req-list');
+    if (!requests.length) {
+      list.innerHTML = `<div class="empty-state"><h3>لا توجد طلبات هنا</h3></div>`;
+      return;
+    }
+    list.innerHTML = requests.map((r) => `
+      <div class="card req-card" data-id="${escapeHtml(r.id)}">
+        <div class="req-top">
+          <div class="req-order">${escapeHtml(r.order_number)}</div>
+          <span class="badge ${STATUS_BADGE[r.status] || 'badge-info'}">${STATUS_LABEL[r.status] || r.status}</span>
+        </div>
+        <dl class="req-grid">
+          <div><dt>الرحلة</dt><dd>${escapeHtml(r.trip_title || '—')}</dd></div>
+          <div><dt>رقم الرحلة (trip_id)</dt><dd style="font-family:monospace;font-size:11px;">${escapeHtml(r.trip_id)}</dd></div>
+          <div><dt>الجوال</dt><dd>${escapeHtml(r.phone)}</dd></div>
+          <div><dt>السعر الأساسي</dt><dd>${escapeHtml(r.regular_price_sar)} ر.س</dd></div>
+          <div><dt>المبلغ المطلوب</dt><dd>${escapeHtml(r.amount_due_sar)} ر.س</dd></div>
+          <div><dt>اسم المحوّل</dt><dd>${escapeHtml(r.sender_name || '—')}</dd></div>
+          <div><dt>رقم العملية/المرجع</dt><dd>${escapeHtml(r.reference_number || '—')}</dd></div>
+          <div><dt>ملاحظة</dt><dd>${escapeHtml(r.note || '—')}</dd></div>
+          <div><dt>وقت تقديم الطلب</dt><dd>${fmtDate(r.updated_at || r.created_at)}</dd></div>
+        </dl>
+        <div class="req-actions">
+          ${r.has_receipt ? `<button class="btn btn-outline btn-sm" data-action="view-receipt">${'عرض الإيصال'}</button>` : ''}
+          ${r.status === 'under_review' ? `
+            <button class="btn btn-primary btn-sm" data-action="approve">اعتماد الدفع</button>
+            <button class="btn btn-danger btn-sm" data-action="reject">رفض / طلب إعادة رفع الإيصال</button>
+          ` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  async function viewReceipt(id) {
+    try {
+      const res = await fetch(`/api/payment/bank-transfer/admin/receipt/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
+      if (!res.ok) { alert('تعذّر تحميل الإيصال'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+    } catch {
+      alert('تعذّر تحميل الإيصال');
+    }
+  }
+
+  async function decide(id, action) {
+    const label = action === 'approve' ? 'اعتماد الدفع' : 'رفض الطلب';
+    if (!confirm(`تأكيد ${label} لهذا التحويل؟`)) return;
+    try {
+      const res = await fetch(`/api/payment/bank-transfer/admin/${action}`, {
+        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { alert(data.error || `تعذّر ${label}`); return; }
+      loadRequests();
+    } catch {
+      alert('تعذّر الاتصال بالخادم');
+    }
+  }
+
+  qs('#req-list').addEventListener('click', (e) => {
+    const card = e.target.closest('.req-card');
+    if (!card) return;
+    const id = card.dataset.id;
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (action === 'view-receipt') viewReceipt(id);
+    if (action === 'approve' || action === 'reject') decide(id, action);
+  });
+
+  qs('#tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    qs('.tab-btn.active')?.classList.remove('active');
+    btn.classList.add('active');
+    currentTab = btn.dataset.status;
+    loadRequests();
+  });
+
+  function showDashboard() {
+    qs('#login-view').classList.add('hidden');
+    qs('#denied-view').classList.add('hidden');
+    qs('#dashboard-view').classList.remove('hidden');
+    loadRequests();
+  }
+  function showDenied() {
+    qs('#login-view').classList.add('hidden');
+    qs('#dashboard-view').classList.add('hidden');
+    qs('#denied-view').classList.remove('hidden');
+  }
+  function showLogin() {
+    qs('#dashboard-view').classList.add('hidden');
+    qs('#denied-view').classList.add('hidden');
+    qs('#login-view').classList.remove('hidden');
+  }
+
+  // عند تحميل الصفحة: إن كانت هناك جلسة صالحة أصلًا (كوكي سابقة)، نحاول تحميل الطلبات مباشرة؛
+  // 401 تعني لا جلسة (نعرض تسجيل الدخول)، 403 تعني جلسة صالحة لكن رقم غير مصرَّح له بالإدارة.
+  async function boot() {
+    try {
+      const res = await fetch('/api/payment/bank-transfer/admin/list?status=under_review', { credentials: 'same-origin' });
+      if (res.status === 401) { showLogin(); return; }
+      if (res.status === 403) { showDenied(); return; }
+      if (res.ok) { showDashboard(); return; }
+      showLogin();
+    } catch {
+      showLogin();
+    }
+  }
+
+  boot();
+</script>
+</body>
+</html>

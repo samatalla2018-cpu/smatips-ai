@@ -207,3 +207,73 @@ test('missing AUTHENTICA_API_KEY fails closed with a 500, never treated as succe
   assert.equal(res.status, 500);
   assert.equal(res.headers.get('Set-Cookie'), null);
 });
+
+// ---- REGRESSION: a D1 failure must return a clear, fast JSON error — never an uncaught exception
+// that leaves the client's fetch() with no resolved/rejected result (the "stuck on جارٍ الإرسال..."
+// bug report). Both send-otp and verify-otp previously called D1 with no try/catch around the
+// rate-limit checks / attempt-recording writes.
+
+function dbThatThrowsOn(db, sqlSubstring) {
+  return {
+    prepare(sql) {
+      if (sql.includes(sqlSubstring)) {
+        const boom = async () => { throw new Error('simulated D1 outage'); };
+        return { bind: () => ({ first: boom, run: boom, all: boom }) };
+      }
+      return db.prepare(sql);
+    },
+    batch: (stmts) => db.batch(stmts),
+  };
+}
+
+test('send-otp: a D1 outage during the rate-limit check fails closed (503), not an uncaught exception', async () => {
+  const db = createFakeD1();
+  const brokenDb = dbThatThrowsOn(db, 'FROM otp_send_attempts');
+  const res = await sendOtp({ request: sendRequest('0555000020'), env: { ...baseEnv(brokenDb) } });
+  assert.equal(res.status, 503);
+  const body = await res.json();
+  assert.ok(body.error, 'must return a clear JSON error, not hang or crash');
+});
+
+test('send-otp: a D1 outage while recording the attempt fails closed (503) and never calls the SMS provider', async () => {
+  const db = createFakeD1();
+  const brokenDb = dbThatThrowsOn(db, 'INSERT INTO otp_send_attempts');
+  let providerCalled = false;
+  mockFetch(async () => { providerCalled = true; return jsonRes(200, {}); });
+  try {
+    const res = await sendOtp({ request: sendRequest('0555000021'), env: { ...baseEnv(brokenDb) } });
+    assert.equal(res.status, 503);
+    assert.equal(providerCalled, false, 'must not spend an SMS credit if we cannot even record the attempt');
+  } finally { restoreFetch(); }
+});
+
+test('verify-otp: a D1 outage during the rate-limit check fails closed (503), not an uncaught exception', async () => {
+  const db = createFakeD1();
+  const brokenDb = dbThatThrowsOn(db, 'FROM otp_verify_attempts');
+  const res = await verifyOtp({ request: verifyRequest('0555000022', '123456'), env: { ...baseEnv(brokenDb) } });
+  assert.equal(res.status, 503);
+  const body = await res.json();
+  assert.ok(body.error);
+});
+
+test('verify-otp: a D1 outage recording the attempt does not block a genuinely successful verification', async () => {
+  const db = createFakeD1();
+  const brokenDb = dbThatThrowsOn(db, 'INSERT INTO otp_verify_attempts');
+  mockFetch(async () => jsonRes(200, { status: true, message: 'OTP verified successfully' }));
+  try {
+    const res = await verifyOtp({ request: verifyRequest('0555000023', '123456'), env: { ...baseEnv(brokenDb) } });
+    assert.equal(res.status, 200, 'a failure to log the attempt statistic must not block a real successful login');
+    assert.ok(res.headers.get('Set-Cookie'));
+  } finally { restoreFetch(); }
+});
+
+test('verify-otp: a D1 outage while creating the user/subscription row after a real success fails closed (503), no exception leaks', async () => {
+  const db = createFakeD1();
+  const brokenDb = dbThatThrowsOn(db, 'INSERT OR IGNORE INTO users');
+  mockFetch(async () => jsonRes(200, { status: true, message: 'OTP verified successfully' }));
+  try {
+    const res = await verifyOtp({ request: verifyRequest('0555000024', '123456'), env: { ...baseEnv(brokenDb) } });
+    assert.equal(res.status, 503);
+    assert.equal(res.headers.get('Set-Cookie'), null, 'no session may be issued if we could not finish provisioning the account');
+  } finally { restoreFetch(); }
+});

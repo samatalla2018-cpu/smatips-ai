@@ -180,7 +180,7 @@ async function initSubscribeButtons() {
   }
 
   btns.forEach((btn) => {
-    btn.textContent = 'ادفع 69 ريال لفتح رحلتك';
+    btn.textContent = `ادفع ${window.PRICING.price_sar} ريال لفتح رحلتك`;
     btn.style.display = '';
     btn.addEventListener('click', () => navigate(`/pay?trip=${encodeURIComponent(tripId)}`));
   });
@@ -234,7 +234,11 @@ async function maybeShowPaymentSuccess() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // تحميل السعر الحقيقي (من env السيرفر عبر /api/pricing) قبل أول عرض — حتى لا تُستخدم القيم
+  // الاحتياطية في js/price.js إلا عند تعذّر الوصول الفعلي للخادم. طلب صغير من نفس الأصل، تأخيره
+  // ضئيل ولا يغيّر أي شيء في التصميم نفسه.
+  await loadPricing();
   injectStaticIcons();
   buildSidebar();
   buildBottomNav();

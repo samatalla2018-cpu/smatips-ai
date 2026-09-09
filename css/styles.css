@@ -304,7 +304,11 @@ img { max-width: 100%; display: block; }
 @media (max-width: 560px) { .search-bar-btn span.hint { display: none; } }
 
 .main {
-  flex: 1;
+  /* لا flex:1 هنا عمدًا: كان يُجبر .main على التمدد لملء كامل ارتفاع الفيوبورت المتبقي حتى لو كان
+     محتوى الصفحة قصيرًا (مثل نموذج الرحلة قبل وجود trip_id) — فتظهر مساحة فارغة ضخمة أسفل آخر
+     عنصر في المحتوى وقبل الفوتر (site-footer)، لأن .main نفسها كانت تحتل تلك المساحة دون محتوى.
+     بإزالتها، يأخذ .main ارتفاعه الطبيعي من محتواه فقط، ويبدأ الفوتر مباشرة بعده بانسيابية؛ أي
+     مساحة فارغة متبقية على صفحة قصيرة تظهر الآن بعد الفوتر (طبيعي ومتوقع)، لا في منتصف الصفحة. */
   min-width: 0;
   padding: 20px 16px calc(var(--bottomnav-h) + 28px);
   max-width: 1080px;
@@ -541,7 +545,7 @@ img { max-width: 100%; display: block; }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
-.field input, .field select, .field textarea {
+.field input, .field select, .field textarea, .dp-trigger {
   height: 44px;
   border-radius: 13px;
   border: 1px solid var(--border);
@@ -554,7 +558,7 @@ img { max-width: 100%; display: block; }
   width: 100%;
 }
 .field textarea { height: auto; min-height: 90px; padding: 12px 14px; resize: vertical; }
-.field input:focus, .field select:focus, .field textarea:focus {
+.field input:focus, .field select:focus, .field textarea:focus, .dp-trigger:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
 }
@@ -564,6 +568,43 @@ img { max-width: 100%; display: block; }
   cursor: not-allowed;
   background: var(--surface-2);
 }
+
+/* زر فتح منتقي التاريخ الاحترافي (js/datepicker.js) — يبدو تمامًا كحقل .field عادي (نفس الأبعاد
+   والحدود أعلاه) لكنه <button> يفتح تقويمًا حقيقيًا بدل input[type=date] الافتراضي للمتصفح، حتى
+   يكون سلوك منع التواريخ الماضية بصريًا ووظيفيًا موحّدًا عبر كل المتصفحات/الأجهزة. */
+.dp-trigger {
+  display: flex; align-items: center; gap: 8px;
+  font-family: inherit; text-align: start; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+}
+.dp-trigger:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
+.dp-trigger .icon { color: var(--text-faint); flex-shrink: 0; }
+.dp-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dp-trigger.is-empty span { color: var(--text-faint); }
+
+/* -------- منتقي التاريخ (تقويم داخل النافذة المنبثقة الحالية modal.js) -------- */
+.dp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.dp-month-label { font-weight: 800; font-size: 15px; }
+.dp-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px; }
+.dp-weekdays span { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); padding: 4px 0; }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dp-cell { aspect-ratio: 1; }
+.dp-day {
+  aspect-ratio: 1; width: 100%; border: none; background: transparent; border-radius: 11px;
+  font-size: 13.5px; font-weight: 700; font-family: inherit; color: var(--text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s var(--ease-out), color .15s var(--ease-out);
+}
+.dp-day:hover:not(.dp-disabled):not(.dp-selected) { background: var(--surface-2); }
+.dp-day.dp-today { box-shadow: inset 0 0 0 1.5px var(--primary); color: var(--primary-dark); }
+.dp-day.dp-selected { background: linear-gradient(135deg, var(--primary), var(--sky)); color: #fff; }
+.dp-day.dp-disabled { color: var(--text-faint); opacity: .4; cursor: not-allowed; pointer-events: none; }
+.dp-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.dp-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); font-weight: 700; }
+.dp-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.dp-dot-today { background: transparent; box-shadow: inset 0 0 0 1.5px var(--primary); }
+.dp-dot-selected { background: linear-gradient(135deg, var(--primary), var(--sky)); }
+.dp-dot-disabled { background: var(--text-faint); opacity: .4; }
 
 /* سهم موحّد لكل القوائم المنسدلة (بدل سهم المتصفح الافتراضي غير المتناسق بين المتصفحات) */
 .field select {
@@ -714,6 +755,80 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .hero-banner-content { padding: 40px 36px 32px; max-width: 640px; }
   .hero-banner h2 { font-size: 32px; }
   .hero-stats { max-width: 420px; }
+}
+
+/* -------- Hero السينمائي للصفحة الرئيسية (dashboard.js) -------- */
+/* على الجوال يبتلع padding أعلى/جانبَي .main بهامش سالب لإحساس أقرب لملء الشاشة (Full-bleed)
+   بدل صورة صغيرة داخل بطاقة؛ على الشاشات الأوسع يعود ضمن عرض المحتوى العادي بزوايا دائرية —
+   تغيير بنية .main نفسها كان سيتطلب إعادة هيكلة أكبر من المطلوب لهذا التعديل. */
+.mega-hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: #fff;
+  min-height: 66vh;
+  display: flex;
+  align-items: flex-end;
+  margin: -20px -16px 0;
+  box-shadow: var(--shadow-lg);
+}
+.mega-hero-img {
+  position: absolute; inset: 0; z-index: -2;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  /* صورة Premium ثابتة بلا أي حركة/تبديل بطلب صريح — أوضح وأقوى بصريًا من شرائح متبدّلة. */
+}
+.mega-hero-scrim {
+  position: absolute; inset: 0; z-index: -1;
+  /* Gradient خفيف بلون فيروزي/كحلي من هوية SmaTrips نفسها (var(--primary-dark)/var(--navy))
+     بدل أسود عادي — يخدم قراءة النص أسفل الصورة فقط، ولا يغطي الصورة كاملة، فتبقى ألوان السفر
+     الحقيقية (الفيروزي، الرمال) هي المهيمنة بصريًا. */
+  background: linear-gradient(0deg,
+    color-mix(in srgb, var(--navy) 78%, var(--primary-dark)) 0%,
+    color-mix(in srgb, var(--navy) 55%, transparent) 32%,
+    transparent 60%);
+  opacity: .62;
+}
+.mega-hero-content { position: relative; padding: 30px 18px 30px; width: 100%; }
+.mega-hero-dest-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, .3);
+  font-size: 12px; font-weight: 800;
+  margin-bottom: 14px;
+}
+/* text-shadow إضافي كطبقة أمان: يبقي النص واضحًا حتى فوق أجزاء فاتحة من الصورة (رمل/رغوة بيضاء)
+   حيث لا يكفي الـGradient وحده — أنيق وخفيف، وليس تعتيمًا كاملًا للصورة. */
+.mega-hero-content h1 { font-size: 27px; font-weight: 900; margin: 0 0 8px; line-height: 1.25; color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, .35); }
+.mega-hero-content > p { font-size: 14px; color: rgba(255, 255, 255, .95); margin: 0 0 22px; max-width: 480px; line-height: 1.7; text-shadow: 0 1px 10px rgba(0, 0, 0, .3); }
+.mega-hero-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.mega-hero-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 999px;
+  background: rgba(255, 255, 255, .14);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, .22);
+  font-size: 11.5px; font-weight: 700; color: #fff;
+}
+.mega-hero-personal .hero-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13.5px; font-weight: 700; color: rgba(255, 255, 255, .92); }
+.mega-hero-personal .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; max-width: 420px; }
+
+@media (min-width: 480px) {
+  .mega-hero { margin: -20px -16px 0; border-radius: 0; }
+}
+@media (min-width: 640px) {
+  .mega-hero { min-height: 78vh; margin: 0; border-radius: 28px; }
+  .mega-hero-content { padding: 56px 44px 48px; max-width: 640px; }
+  .mega-hero-content h1 { font-size: 42px; }
+  .mega-hero-content > p { font-size: 16px; }
+}
+@media (min-width: 901px) {
+  .mega-hero { min-height: 82vh; }
+}
+@media (max-width: 420px) {
+  .mega-hero-chips { display: none; } /* تقليل الازدحام على الجوال الصغير جدًا كما طُلب */
 }
 
 /* -------- شريط إحصاءات مرتفع فوق الـHero (Trip Details): تاريخ/أيام/مسافرين/ميزانية -------- */

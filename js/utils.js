@@ -28,6 +28,13 @@ function formatDateAr(dateStr, opts = {}) {
   return parts.join(opts.weekday !== false ? '، ' : ' ');
 }
 
+// تاريخ اليوم بصيغة YYYY-MM-DD محليًا (وليس UTC) — يُستخدم كحد أدنى افتراضي لمنتقي التاريخ
+// (js/datepicker.js) حتى لا تُختار أي تواريخ ماضية.
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function daysBetween(startStr, endStr) {
   if (!startStr || !endStr) return 0;
   const start = new Date(startStr + 'T00:00:00');
@@ -180,6 +187,7 @@ function invalidateTripAccessCache() { _tripAccessCache = { tripId: null, at: 0,
 
 window.getTripAccess = getTripAccess;
 window.invalidateTripAccessCache = invalidateTripAccessCache;
+window.todayISO = todayISO;
 window.uid = uid;
 window.escapeHtml = escapeHtml;
 window.formatDateAr = formatDateAr;

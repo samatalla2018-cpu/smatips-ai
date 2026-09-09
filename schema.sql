@@ -65,3 +65,29 @@ ALTER TABLE trips ADD COLUMN amount_sar INTEGER;
 
 CREATE INDEX IF NOT EXISTS idx_trips_payment_status ON trips(payment_status);
 CREATE INDEX IF NOT EXISTS idx_trips_moyasar_invoice ON trips(moyasar_invoice_id);
+
+-- ==== 0004_bank_transfer.sql ====
+CREATE TABLE IF NOT EXISTS bank_transfer_requests (
+  id TEXT PRIMARY KEY,
+  order_number TEXT NOT NULL UNIQUE,
+  trip_id TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  regular_price_sar INTEGER NOT NULL,
+  amount_due_sar INTEGER NOT NULL,
+  sender_name TEXT,
+  reference_number TEXT,
+  receipt_asset_key TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | under_review | paid | rejected
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  reviewed_by TEXT,
+  reviewed_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_btr_trip ON bank_transfer_requests(trip_id);
+CREATE INDEX IF NOT EXISTS idx_btr_status ON bank_transfer_requests(status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_btr_trip_active
+  ON bank_transfer_requests(trip_id)
+  WHERE status IN ('pending', 'under_review');

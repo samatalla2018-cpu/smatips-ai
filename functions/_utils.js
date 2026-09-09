@@ -267,3 +267,98 @@ export async function recordPaymentEvent(db, invoiceId, status, phone) {
     return { firstTime: false };
   }
 }
+
+// ---- تحويل بنكي: طريقة دفع ثانية إلى جانب Moyasar، مرتبطة دائمًا بـ trip_id واحد ----
+// لا "Trip Pass" منفصل هنا: الاعتماد الإداري ينتهي دائمًا باستدعاء activateTripPayment() نفسها
+// المستخدمة لتفعيل Moyasar، فتبقى isTripUnlocked() هي بوابة القرار الوحيدة للفتح كما هي تمامًا.
+
+const ORDER_CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // بلا 0/O أو 1/I لتفادي الالتباس عند القراءة يدويًا
+function randomOrderCode() {
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  let code = '';
+  for (const b of bytes) code += ORDER_CODE_ALPHABET[b % ORDER_CODE_ALPHABET.length];
+  return `SMA-${code}`;
+}
+
+export async function createBankTransferRequest(db, { tripId, phone, regularPriceSar, amountDueSar }) {
+  const id = crypto.randomUUID();
+  const orderNumber = randomOrderCode();
+  const now = Date.now();
+  await db.prepare(
+    `INSERT INTO bank_transfer_requests
+       (id, order_number, trip_id, phone, regular_price_sar, amount_due_sar, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+  ).bind(id, orderNumber, tripId, phone, regularPriceSar, amountDueSar, now, now).run();
+  return { id, order_number: orderNumber, trip_id: tripId, phone, regular_price_sar: regularPriceSar, amount_due_sar: amountDueSar, status: 'pending', created_at: now, updated_at: now };
+}
+
+// طلب "نشط" = pending أو under_review — يُستخدم لمنع إنشاء طلب تحويل مكرر لنفس الرحلة (نفس الفهرس
+// الفريد الجزئي idx_btr_trip_active في قاعدة البيانات هو خط الدفاع الثاني عند تسابق الطلبات).
+export async function getActiveBankTransferRequest(db, tripId) {
+  return db.prepare(
+    `SELECT * FROM bank_transfer_requests WHERE trip_id = ? AND status IN ('pending', 'under_review') ORDER BY created_at DESC LIMIT 1`
+  ).bind(tripId).first();
+}
+
+export async function getLatestBankTransferRequestForTrip(db, tripId) {
+  return db.prepare(
+    `SELECT * FROM bank_transfer_requests WHERE trip_id = ? ORDER BY created_at DESC LIMIT 1`
+  ).bind(tripId).first();
+}
+
+export async function getBankTransferRequestById(db, id) {
+  return db.prepare('SELECT * FROM bank_transfer_requests WHERE id = ?').bind(id).first();
+}
+
+// يحفظ بيانات إثبات التحويل ويحوّل الطلب إلى "بانتظار المراجعة" — لا يفتح الرحلة إطلاقًا؛
+// WHERE status='pending' يمنع إعادة إرسال إثبات لطلب سبق أن أُرسل إثباته أو رُوجع بالفعل.
+export async function submitBankTransferProof(db, id, { senderName, referenceNumber, receiptAssetKey, note }) {
+  const now = Date.now();
+  await db.prepare(
+    `UPDATE bank_transfer_requests
+     SET sender_name = ?, reference_number = ?, receipt_asset_key = ?, note = ?, status = 'under_review', updated_at = ?
+     WHERE id = ? AND status = 'pending'`
+  ).bind(senderName, referenceNumber || null, receiptAssetKey || null, note || null, now, id).run();
+}
+
+export async function listBankTransferRequests(db, status) {
+  const base = `SELECT r.*, t.title AS trip_title FROM bank_transfer_requests r LEFT JOIN trips t ON t.id = r.trip_id`;
+  if (status) {
+    const { results } = await db.prepare(`${base} WHERE r.status = ? ORDER BY r.created_at DESC LIMIT 200`).bind(status).all();
+    return results || [];
+  }
+  const { results } = await db.prepare(`${base} ORDER BY r.created_at DESC LIMIT 200`).all();
+  return results || [];
+}
+
+export async function approveBankTransferRequest(db, id, adminPhone) {
+  const now = Date.now();
+  await db.prepare(
+    `UPDATE bank_transfer_requests SET status = 'paid', reviewed_by = ?, reviewed_at = ?, updated_at = ? WHERE id = ? AND status = 'under_review'`
+  ).bind(adminPhone, now, now, id).run();
+}
+
+export async function rejectBankTransferRequest(db, id, adminPhone) {
+  const now = Date.now();
+  await db.prepare(
+    `UPDATE bank_transfer_requests SET status = 'rejected', reviewed_by = ?, reviewed_at = ?, updated_at = ? WHERE id = ? AND status = 'under_review'`
+  ).bind(adminPhone, now, now, id).run();
+}
+
+// ---- صلاحية Admin: تحقق سيرفر-side حقيقي، وليس إخفاء رابط ----
+// ADMIN_PHONES هي القائمة الوحيدة الموثوقة (متغيّر بيئة سيرفر، مفصولة بفواصل) — فارغة افتراضيًا،
+// أي لا أحد Admin ما لم تُضبط صراحةً (fail-closed). يجب أن تملك الجلسة نفسها (كوكي موقّعة) صالحة أولًا.
+export function normalizeAdminPhoneList(raw) {
+  return (raw || '').split(',').map((p) => normalizePhone(p.trim())).filter(Boolean);
+}
+
+export async function requireAdmin(request, env) {
+  const token = readSessionCookie(request);
+  const session = await verifySessionToken(token, env.SESSION_SECRET);
+  if (!session) return { error: jsonResponse({ error: 'الجلسة غير صالحة' }, 401) };
+  const allowed = normalizeAdminPhoneList(env.ADMIN_PHONES);
+  if (!allowed.length || !allowed.includes(normalizePhone(session.phone))) {
+    return { error: jsonResponse({ error: 'غير مصرح' }, 403) };
+  }
+  return { phone: session.phone };
+}

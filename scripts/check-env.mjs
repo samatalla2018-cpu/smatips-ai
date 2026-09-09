@@ -13,11 +13,22 @@ const REQUIRED = [
   'MOYASAR_SECRET_KEY',
   'MOYASAR_WEBHOOK_SECRET',
   'SUBSCRIPTION_PRICE_SAR',
+  'REGULAR_PRICE_SAR',
+  'BANK_NAME',
+  'BANK_ACCOUNT_NAME',
+  'BANK_IBAN',
+  'ADMIN_PHONES',
 ];
 
 const RECOMMENDED = [
   'ALLOWED_PHONE', // اختياري بالتصميم (تجاوز المالك) — لكن غيابه يعني عدم وجود تجاوز، وهذا مقصود أحيانًا
+  'ADMIN_EMAIL', // اختياري بالتصميم: إشعار بريدي للإدارة عند طلب تحويل بنكي جديد — بدونه، يُحفظ الطلب بلا إشعار (لا يفشل شيء)
+  'RESEND_API_KEY', // اختياري أيضًا، ولازم معًا مع ADMIN_EMAIL لتفعيل الإشعار (functions/_email.js)
 ];
+
+// ملاحظة: ربط R2 (RECEIPTS_BUCKET) لتخزين إيصالات التحويل البنكي binding وليس متغيّر بيئة نصي —
+// لا يظهر في process.env ولا يمكن التحقق من وجوده من هذا السكربت؛ يُضاف يدويًا من لوحة Cloudflare
+// Pages (Settings → Functions → R2 bucket bindings)، وتتحقق منه دوال التحويل البنكي نفسها وقت التشغيل.
 
 const missing = REQUIRED.filter((name) => !process.env[name]);
 

@@ -371,11 +371,13 @@ function tripFormHtml(trip) {
       <div class="field-row">
         <div class="field">
           <label>تاريخ البداية</label>
-          <input type="date" name="startDate" value="${escapeHtml(trip.startDate)}" />
+          <button type="button" class="dp-trigger${trip.startDate ? '' : ' is-empty'}" id="start-date-trigger">${icon('calendar', 16)}<span id="start-date-label">${trip.startDate ? formatDateAr(trip.startDate, { weekday: false }) : 'اختر تاريخ البداية'}</span></button>
+          <input type="hidden" name="startDate" id="start-date-input" value="${escapeHtml(trip.startDate)}" />
         </div>
         <div class="field">
           <label>تاريخ النهاية</label>
-          <input type="date" name="endDate" value="${escapeHtml(trip.endDate)}" />
+          <button type="button" class="dp-trigger${trip.endDate ? '' : ' is-empty'}" id="end-date-trigger">${icon('calendar', 16)}<span id="end-date-label">${trip.endDate ? formatDateAr(trip.endDate, { weekday: false }) : 'اختر تاريخ النهاية'}</span></button>
+          <input type="hidden" name="endDate" id="end-date-input" value="${escapeHtml(trip.endDate)}" />
         </div>
       </div>
 
@@ -418,10 +420,63 @@ function tripFormHtml(trip) {
     </form>`;
 }
 
+// يحدّث زر منتقي التاريخ (النص المعروض + الحقل المخفي المرتبط بالنموذج + حالة "فارغ" البصرية)
+function setDateTrigger(prefix, iso, placeholder) {
+  const trigger = qs(`#${prefix}-date-trigger`);
+  const label = qs(`#${prefix}-date-label`);
+  const input = qs(`#${prefix}-date-input`);
+  if (!trigger || !label || !input) return;
+  input.value = iso || '';
+  if (iso) {
+    label.textContent = formatDateAr(iso, { weekday: false });
+    trigger.classList.remove('is-empty');
+  } else {
+    label.textContent = placeholder;
+    trigger.classList.add('is-empty');
+  }
+}
+
+// يربط زرَّي تاريخ البداية/النهاية بمنتقي التاريخ (js/datepicker.js): يمنع أي تاريخ ماضٍ من
+// الأساس (Disabled فعليًا في شبكة التقويم، وليس رسالة خطأ بعد الاختيار)، ويمنع اختيار تاريخ نهاية
+// قبل تاريخ البداية بنفس الطريقة. إن غيّر المستخدم تاريخ البداية وأصبح تاريخ النهاية المختار
+// سابقًا غير صالح، يُمسح تاريخ النهاية تلقائيًا مع رسالة توضيحية بدل ترك حالة متناقضة صامتة.
+function wireTripDateFields() {
+  const startTrigger = qs('#start-date-trigger');
+  const endTrigger = qs('#end-date-trigger');
+  if (!startTrigger || !endTrigger) return;
+
+  startTrigger.addEventListener('click', () => {
+    openDatePicker({
+      title: 'تاريخ بداية الرحلة',
+      initialISO: qs('#start-date-input').value,
+      minISO: todayISO(),
+      onSelect: (iso) => {
+        setDateTrigger('start', iso, 'اختر تاريخ البداية');
+        const currentEnd = qs('#end-date-input').value;
+        if (currentEnd && currentEnd < iso) {
+          setDateTrigger('end', '', 'اختر تاريخ النهاية');
+          toast('تم مسح تاريخ النهاية لأنه أصبح قبل تاريخ البداية الجديد — اختاري تاريخًا جديدًا', 'error');
+        }
+      },
+    });
+  });
+
+  endTrigger.addEventListener('click', () => {
+    const currentStart = qs('#start-date-input').value;
+    openDatePicker({
+      title: 'تاريخ نهاية الرحلة',
+      initialISO: qs('#end-date-input').value,
+      minISO: currentStart || todayISO(),
+      onSelect: (iso) => setDateTrigger('end', iso, 'اختر تاريخ النهاية'),
+    });
+  });
+}
+
 function wireTripForm(container) {
   const form = qs('#trip-form');
   const countryInput = form.querySelector('[name=country]');
   const cityInput = form.querySelector('[name=city]');
+  wireTripDateFields();
   const hasDetailsHero = !!qs('#trip-details-hero');
   const handleDestInput = debounce(() => {
     if (hasDetailsHero) {
@@ -502,7 +557,7 @@ async function createTripOnServer() {
 // "أكمل رحلتي": يحجز trip_id مباشرة إن كانت هناك جلسة صالحة أصلًا، وإلا يفتح خطوة OTP داخل نفس
 // الصفحة (js/otp.js) ثم يعيد المحاولة تلقائيًا فور نجاحها — بلا أي إعادة تحميل، فبيانات الرحلة
 // المحلية (التي بُنيت منها هذه المعاينة) لا تُفقد أبدًا. بعد نجاح الحجز تتحول الصفحة تلقائيًا
-// لحالة trip_id الحقيقية أدناه في renderTrip، التي تعرض بطاقة الدفع (69 ريال) كما هي دون تغيير.
+// لحالة trip_id الحقيقية أدناه في renderTrip، التي تعرض بطاقة الدفع (بالسعر الحالي من window.PRICING) كما هي دون تغيير.
 async function completeTripFlow(container) {
   const btn = qs('#complete-trip-btn');
   const originalHtml = btn.innerHTML;
