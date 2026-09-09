@@ -165,12 +165,14 @@ function moreToolsGrid() {
     </div>`;
 }
 
+// الصفحة الرئيسية (/) تعرض دائمًا Hero الإلهام العام — لا تُحمَّل أبدًا من آخر رحلة محفوظة في
+// store.getTrip() (التي تبقى مجرد "سياق العمل الحالي" المستخدم في صفحات أخرى كـ/trip و/pay، ولا
+// علاقة لها بما يجب أن تعرضه الصفحة الرئيسية نفسها). رحلاتك المحفوظة تبقى كما هي تمامًا ومتاحة
+// دائمًا عبر "رحلاتي" (ضمن أدوات الرحلة أدناه) أو بفتح رابط الرحلة مباشرة — لا حذف لأي بيانات هنا،
+// فقط توقّفت الصفحة الرئيسية عن استخدام سياق آخر رحلة لعرض Hero مخصّص بها تلقائيًا.
 function renderDashboard(container) {
-  const trip = store.getTrip();
   container.innerHTML = `
-    ${tripSummaryCard(trip)}
-    ${quickActionsRow(trip)}
-    ${tripPreviewPromptCard(trip)}
+    ${inspirationHeroHtml()}
     ${destinationIdeasStrip()}
     ${moreToolsGrid()}
   `;
