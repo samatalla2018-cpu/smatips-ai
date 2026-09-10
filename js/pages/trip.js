@@ -1,9 +1,10 @@
 // صفحة "رحلتي" — قبل trip_id: نموذج بدء الرحلة. بعد trip_id: صفحة تفاصيل رحلة (Hero + إحصاءات
 // + معاينة يومية)، والنموذج القابل للتعديل يبقى كاملًا وفعّالًا أسفلها داخل قسم قابل للطي.
 
-// بطاقة حالة الرحلة قبل وجود trip_id: زر "أنشئ خطتي" — لا يتصل بالسيرفر إطلاقًا في هذه اللحظة،
+// بطاقة حالة الرحلة قبل وجود trip_id: زر "أكمل خطتك" — لا يتصل بالسيرفر إطلاقًا في هذه اللحظة،
 // فقط يحفظ بيانات النموذج محليًا ويعرض معاينة مجانية فورية (Guest Preview بلا تسجيل دخول). حجز
-// trip_id الحقيقي من السيرفر يحدث لاحقًا فقط عند "أكمل رحلتي" (renderGuestPreview أدناه).
+// trip_id الحقيقي من السيرفر يحدث لاحقًا فقط عند "أكمل رحلتي" (renderGuestPreview أدناه). تُعرض
+// الآن بعد النموذج مباشرة (CTA ختامي بعد إدخال البيانات) بدل قبله.
 function tripStatusCardHtml(trip) {
   if (!trip.id) {
     return `
@@ -11,11 +12,11 @@ function tripStatusCardHtml(trip) {
         <div class="flex items-center gap-3">
           <div class="page-header-icon" style="width:40px;height:40px;border-radius:12px;">${icon('sparkle', 18)}</div>
           <div style="flex:1;">
-            <div class="item-title">جهّز بيانات رحلتك بالأسفل ثم أنشئ خطتك</div>
-            <div class="text-sm text-muted">شاهد معاينة حقيقية لرحلتك فورًا — بلا تسجيل دخول وبلا أي دفع</div>
+            <div class="item-title">جاهز تكمل رحلتك؟</div>
+            <div class="text-sm text-muted">خطتك بدأت… كمّل التفاصيل واحفظ رحلتك في مكان واحد.</div>
           </div>
         </div>
-        <button class="btn btn-pill btn-accent btn-block mt-3" id="start-trip-btn">${icon('sparkle', 16)}<span>أنشئ خطتي</span></button>
+        <button class="btn btn-pill btn-accent btn-block mt-3" id="start-trip-btn">${icon('sparkle', 16)}<span>أكمل خطتك</span></button>
       </div>`;
   }
   return '';
@@ -160,7 +161,7 @@ function tripPreviewSectionHtml(trip) {
         <div class="empty-state-icon">${icon('calendar', 24)}</div>
         <h3>خطتك جاهزة تستقبل أول يوم</h3>
         <p>أضف تواريخ رحلتك بالأسفل أو ابنِ جدولك يدويًا لتظهر هنا معاينة حقيقية ليومك الأول قبل أي دفع.</p>
-        <a class="btn btn-primary btn-sm mt-2" href="#/itinerary">${icon('plus', 15)}<span>ابنِ جدول رحلتك</span></a>
+        <a class="btn btn-accent btn-sm mt-2" href="#/itinerary">${icon('plus', 15)}<span>ابنِ جدول رحلتك</span></a>
       </div>`;
   } else {
     const day1 = days[0];
@@ -615,8 +616,8 @@ function renderTrip(container) {
     container.innerHTML = `
       ${tripOnboardingBannerHtml(trip)}
       ${pageHeader({ title: 'بيانات الرحلة', desc: 'هذه البيانات تُستخدم في كل أنحاء الموقع', iconName: 'passport' })}
-      ${tripStatusCardHtml(trip)}
       ${tripFormHtml(trip)}
+      ${tripStatusCardHtml(trip)}
     `;
 
     const { saveTripFormData } = wireTripForm(container);
