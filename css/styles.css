@@ -1372,6 +1372,53 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .footer-social-icon.phone { background: var(--accent); }
 .footer-copy { font-size: 11.5px; color: var(--text-faint); margin-top: 8px; }
 
+/* -------- الفوتر: الروابط القانونية والتنظيمية -------- */
+.footer-links-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 18px;
+  margin: 4px 0 4px;
+  max-width: 560px;
+}
+.footer-links-row a {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: color .2s var(--ease-out);
+}
+.footer-links-row a:hover { color: var(--primary-dark); }
+
+/* -------- صفحات السياسات: Accordion (details/summary أصلي، بنفس فكرة .trip-edit-details) -------- */
+.policy-accordion { display: flex; flex-direction: column; gap: 10px; }
+.policy-accordion-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.policy-accordion-item > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex; align-items: center; gap: 10px;
+  padding: 15px 16px;
+  font-weight: 800; font-size: 14.5px; color: var(--text);
+  transition: background .2s var(--ease-out);
+}
+.policy-accordion-item > summary::-webkit-details-marker { display: none; }
+.policy-accordion-item > summary:hover { background: var(--surface-2); }
+.policy-accordion-item > summary .chev { margin-inline-start: auto; color: var(--text-faint); transition: transform .2s var(--ease-out); flex-shrink: 0; }
+.policy-accordion-item[open] > summary .chev { transform: rotate(180deg); }
+.policy-accordion-body {
+  padding: 0 16px 16px;
+  font-size: 13.5px;
+  line-height: 1.9;
+  color: var(--text-muted);
+}
+.policy-accordion-body p { margin: 0 0 10px; }
+.policy-accordion-body p:last-child { margin-bottom: 0; }
+
 /* -------- زر واتساب العائم -------- */
 .whatsapp-float {
   position: fixed;

@@ -11,6 +11,7 @@ function otpModalBodyHtml() {
       <div class="field" id="otp-phone-step">
         <label>رقم الجوال</label>
         <input type="tel" id="otp-phone-input" placeholder="9665XXXXXXXX" autocomplete="off" inputmode="tel" />
+        <div class="text-sm text-muted" style="margin-top:6px;">باستخدامك رقم جوالك، أنت توافق على <a href="#/privacy" target="_blank" rel="noopener noreferrer" style="color:var(--primary-dark);font-weight:700;">سياسة الخصوصية</a></div>
       </div>
       <div class="field" id="otp-code-step" hidden>
         <label>رمز التحقق (SMS)</label>

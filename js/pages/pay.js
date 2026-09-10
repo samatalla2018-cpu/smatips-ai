@@ -146,6 +146,13 @@ function renderPaymentOptions(host, trip, tripId, priorBtStatus) {
     ` : ''}
     <button class="btn btn-primary btn-block" id="pay-now-btn">${icon('wallet', 16)}<span>ادفع الآن — بطاقة/Apple Pay</span></button>
     <button class="btn btn-outline btn-block mt-2" id="pay-bank-transfer-btn">${icon('passport', 16)}<span>التحويل البنكي</span></button>
+    <div class="text-sm text-muted" style="text-align:center;margin-top:12px;line-height:1.9;">
+      بإتمام الدفع، أنت توافق على
+      <a href="#/terms" target="_blank" rel="noopener noreferrer" style="color:var(--primary-dark);font-weight:700;">الشروط والأحكام</a>،
+      <a href="#/privacy" target="_blank" rel="noopener noreferrer" style="color:var(--primary-dark);font-weight:700;">سياسة الخصوصية</a>،
+      <a href="#/refund-policy" target="_blank" rel="noopener noreferrer" style="color:var(--primary-dark);font-weight:700;">سياسة الاسترجاع والإلغاء</a>
+      و<a href="#/payment-policy" target="_blank" rel="noopener noreferrer" style="color:var(--primary-dark);font-weight:700;">سياسة الدفع</a>
+    </div>
     <div class="msg" id="pay-msg" style="font-size:13px;text-align:center;margin-top:10px;min-height:18px;"></div>`;
 
   qs('#pay-now-btn').addEventListener('click', async () => {
