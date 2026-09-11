@@ -44,11 +44,12 @@ async function refreshTripStatusCard() {
 
 // ---------- معاينة الرحلة (Preview) قبل الدفع ----------
 // تُبنى بالكامل من بيانات المستخدم المحلية الحقيقية — إن لم يُضِف أنشطة بعد، تظهر دعوة لإضافتها
-// بدل التظاهر بوجود خطة جاهزة. اليوم الأول يظهر كاملًا، الثاني كلمحة مموّهة، والباقي مقفل بعدد فقط.
+// بدل التظاهر بوجود خطة جاهزة. اليوم الأول يظهر كاملًا وقابلًا للتعديل (إضافة/تعديل/حذف أنشطة)،
+// والباقي مقفل بعدد فقط. أزرار التعديل/الحذف هنا مرتبطة عبر wireDay1PreviewActions أدناه.
 function previewActivityRowHtml(a) {
   const typeMeta = PLACE_TYPES.find((t) => t.id === a.type) || PLACE_TYPES[PLACE_TYPES.length - 1];
   return `
-    <div class="timeline-item">
+    <div class="timeline-item" data-activity-id="${a.id}">
       <div class="timeline-dot">${icon(typeMeta.icon, 12)}</div>
       <div class="item-card" style="padding:10px;">
         <div style="flex:1; min-width:0;">
@@ -58,6 +59,10 @@ function previewActivityRowHtml(a) {
             <span class="badge">${escapeHtml(typeMeta.label)}</span>
           </div>
           ${a.notes ? `<div class="text-sm text-muted mt-1">${escapeHtml(a.notes)}</div>` : ''}
+        </div>
+        <div class="flex gap-1">
+          <button type="button" class="icon-btn btn-sm" style="width:32px;height:32px;" data-day1-activity-action="edit" aria-label="تعديل النشاط">${icon('edit', 13)}</button>
+          <button type="button" class="icon-btn btn-sm" style="width:32px;height:32px;" data-day1-activity-action="delete" aria-label="حذف النشاط">${icon('trash', 13)}</button>
         </div>
       </div>
     </div>`;
@@ -166,9 +171,13 @@ function tripPreviewSectionHtml(trip) {
   } else {
     const day1 = days[0];
     const day1Activities = activitiesOf(day1);
+    // عدد الأيام المقفلة يُحسب من مدة الرحلة الكاملة (trip.startDate/endDate) وليس من أيام
+    // مُنشأة فعليًا — أيام الرحلة 2+ لم تعُد تُنشأ أصلًا في وضع المعاينة المجانية (راجع
+    // autoGenerateFirstDayOnly في itinerary.js)، فلا توجد بيانات لها لنحسب طولها منها.
+    const remainingDaysCount = Math.max(0, (tripDays || 1) - 1);
     day1Section = `
       <div class="section-title-row"><h2>اليوم الأول من خطتك</h2></div>
-      <div class="card">
+      <div class="card" id="day1-preview-card" data-day-id="${day1.id}">
         <div class="font-bold" style="margin-bottom:10px;">${formatDateAr(day1.date)}${day1.title ? ' — ' + escapeHtml(day1.title) : ''}</div>
         ${day1Activities.length
           ? `<div class="timeline-list">${day1Activities.map(previewActivityRowHtml).join('')}</div>`
@@ -176,10 +185,10 @@ function tripPreviewSectionHtml(trip) {
                <div class="empty-state-icon">${icon('sparkle', 20)}</div>
                <h3>لم تُضِف أنشطة لليوم الأول بعد</h3>
                <p>أضف أول نشاط ليظهر هنا كمعاينة حقيقية لرحلتك</p>
-               <a class="btn btn-primary btn-sm mt-2" href="#/itinerary">${icon('plus', 15)}<span>أضف أول نشاط</span></a>
              </div>`}
+        <button type="button" class="btn btn-primary btn-sm btn-block mt-2" id="day1-add-activity-btn">${icon('plus', 15)}<span>إضافة نشاط لليوم الأول</span></button>
       </div>
-      ${lockedDaysListHtml(days.slice(1))}`;
+      ${lockedDaysListHtml(remainingDaysCount)}`;
   }
 
   return `${summaryHtml}${day1Section}<div id="trip-mini-weather"></div>${tripMiniPlacesHtml()}${tripMiniTasksPackingHtml()}`;
@@ -188,6 +197,39 @@ function tripPreviewSectionHtml(trip) {
 // نفس محتوى المعاينة المجانية بالضبط، لكن مع بطاقة الدفع الحقيقية (بعد وجود trip_id فعلي)
 function tripPreviewWithPaywallHtml(trip) {
   return `${tripPreviewSectionHtml(trip)}${paywallCardHtml(trip.id)}`;
+}
+
+// يربط إضافة/تعديل/حذف أنشطة اليوم الأول فقط داخل معاينة الرحلة المجانية نفسها (ضيف قبل
+// trip_id، أو رحلة مسجَّلة غير مدفوعة عبر renderTripPreviewSection) — بلا أي انتقال لصفحة الجدول
+// الكامل (openActivityModal يفتح نفس النافذة المنبثقة العامة من أي صفحة). نمرر onSaved الخاص بنا
+// بدل الافتراضي حتى لا تُستبدل الصفحة بجدول كامل بعد الحفظ، بل يُعاد رسم المعاينة نفسها فقط.
+// لا يمكن أبدًا استهداف أي يوم غير day1 من هنا — معرّف اليوم يُقرأ دائمًا من data-day-id للبطاقة.
+function wireDay1PreviewActions(host, rerender) {
+  const card = qs('#day1-preview-card', host);
+  if (!card) return;
+  const dayId = card.dataset.dayId;
+
+  const addBtn = qs('#day1-add-activity-btn', host);
+  if (addBtn) {
+    addBtn.addEventListener('click', () => openActivityModal(host, dayId, null, rerender));
+  }
+
+  card.addEventListener('click', (e) => {
+    const actionEl = e.target.closest('[data-day1-activity-action]');
+    if (!actionEl) return;
+    const itemEl = e.target.closest('[data-activity-id]');
+    const activityId = itemEl?.dataset.activityId;
+    if (!activityId) return;
+    if (actionEl.dataset.day1ActivityAction === 'edit') {
+      openActivityModal(host, dayId, activityId, rerender);
+    } else if (actionEl.dataset.day1ActivityAction === 'delete') {
+      if (confirm('هل تريد حذف هذا النشاط؟')) {
+        store.remove('activities', activityId);
+        toast('تم حذف النشاط');
+        rerender();
+      }
+    }
+  });
 }
 
 // بطاقة CTA لمرحلة "قبل تسجيل الدخول": نفس هوية بطاقة الدفع (paywall-card) بصريًا لكن بلا سعر أو
@@ -256,6 +298,7 @@ function renderTripPreviewSection(access) {
   el.innerHTML = tripPreviewWithPaywallHtml(trip);
   if (window.initAnimate) initAnimate(el);
   loadTripMiniWeather(trip);
+  wireDay1PreviewActions(el, () => renderTripPreviewSection(access));
 }
 
 // ---------- Hero بانر ما قبل الإنشاء (لا وجهة نهائية بعد) ----------
@@ -539,6 +582,8 @@ function renderGuestPreview(container, trip) {
   });
 
   qs('#complete-trip-btn').addEventListener('click', () => completeTripFlow(container));
+
+  wireDay1PreviewActions(container, () => renderGuestPreview(container, store.getTrip()));
 }
 
 // يحاول حجز trip_id حقيقي من السيرفر بعنوان الرحلة المحلي الحالي — يُستدعى مرتين محتملتين: مرة
@@ -631,7 +676,10 @@ function renderTrip(container) {
         toast('أدخل وجهتك (الدولة أو المدينة) على الأقل أولًا', 'error');
         return;
       }
-      if (typeof autoGenerateDays === 'function') autoGenerateDays(t);
+      // معاينة مجانية = اليوم الأول فقط مهما كانت مدة الرحلة — لا تُنشأ بيانات بقية الأيام إطلاقًا
+      // قبل دفع حقيقي (راجع autoGenerateFirstDayOnly في itinerary.js). تواريخ الرحلة الكاملة
+      // تبقى محفوظة في بيانات الرحلة نفسها لإكمال بقية الأيام لاحقًا بعد الدفع.
+      if (typeof autoGenerateFirstDayOnly === 'function') autoGenerateFirstDayOnly(t);
       store.updateTrip({ previewReady: true });
       toast('هذه معاينة رحلتك ✨', 'success');
       renderTrip(container);

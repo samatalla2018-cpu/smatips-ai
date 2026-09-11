@@ -72,14 +72,15 @@ function lockedFeatureHtml({ iconName, title, desc, tripId }) {
   `;
 }
 
-// صف مدمج لبقية الأيام المقفلة — عدد فقط بدل بطاقة منفصلة لكل يوم (يُستخدم في معاينة الرحلة
-// المجانية أسفل يوم رحلتك الأول)
-function lockedDaysListHtml(days) {
-  if (!days.length) return '';
+// صف مدمج لعدد الأيام المقفلة — عدد فقط (محسوب من مدة الرحلة الكاملة)، بدل بطاقة منفصلة لكل يوم
+// (يُستخدم في معاينة الرحلة المجانية أسفل يوم رحلتك الأول). يأخذ عددًا مباشرة وليس مصفوفة أيام،
+// لأن أيام الرحلة 2+ لم تعد تُنشأ أصلًا في وضع المعاينة المجانية — لا بيانات حقيقية لعرضها هنا.
+function lockedDaysListHtml(count) {
+  if (!count) return '';
   return `
     <div class="locked-list-row" data-animate>
       ${icon('shield', 15)}
-      <span>+${days.length} ${days.length === 1 ? 'يوم آخر مقفل' : 'أيام أخرى مقفلة'} — تُفتح فور الدفع</span>
+      <span>+${count} ${count === 1 ? 'يوم آخر مقفل' : 'أيام أخرى مقفلة'} — تُفتح فور الدفع</span>
     </div>`;
 }
 
