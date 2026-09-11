@@ -293,6 +293,19 @@ function openDayModal(container, dayId) {
 }
 
 // ---------- نموذج النشاط ----------
+// تحقق موسّع من رابط الخريطة خاص بهذا النموذج فقط: يقبل روابط Google Maps الكاملة (نفس
+// isValidMapsUrl المشتركة في utils.js دون تعديلها) بالإضافة إلى روابط Google Maps المختصرة
+// (maps.app.goo.gl) التي كانت تُرفض خطأً رغم كونها روابط Google Maps حقيقية وصالحة.
+function isValidActivityMapsUrl(url) {
+  if (isValidMapsUrl(url)) return true;
+  try {
+    const u = new URL(url);
+    return /(^|\.)maps\.app\.goo\.gl$/.test(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function activityFormHtml(activity) {
   const a = activity || {};
   const places = store.list('places');
@@ -370,7 +383,7 @@ function openActivityModal(container, dayId, activityId) {
       const fd = new FormData(form);
       const placeId = fd.get('placeId') || '';
       const mapsUrlRaw = placeId ? '' : fd.get('mapsUrl').trim();
-      if (mapsUrlRaw && !isValidMapsUrl(mapsUrlRaw)) {
+      if (mapsUrlRaw && !isValidActivityMapsUrl(mapsUrlRaw)) {
         toast('الرابط المُدخل ليس رابط Google Maps صالحًا', 'error');
         return;
       }
