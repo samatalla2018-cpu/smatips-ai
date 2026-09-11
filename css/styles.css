@@ -1516,6 +1516,14 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .modal-header h3 { font-size: 15px; }
   .modal-body { padding: 13px; gap: 10px; }
 
+  /* -------- نموذج "إضافة/تعديل نشاط" فقط (#activity-form) على الجوال — تقليل المسافات
+     الرأسية بين كل تسمية وحقلها وبين مجموعات الحقول لجعل النافذة أكثر Compact، دون أي تغيير
+     على الألوان/الخطوط/عرض الحقول/الزوايا أو أي نافذة أخرى في الموقع. -------- */
+  #activity-form { gap: 10px; }
+  #activity-form .field { gap: 4px; }
+  #activity-form .activity-form-fields { gap: 10px; }
+  #activity-form .field textarea { min-height: 72px; }
+
   .section-title-row { margin: 24px 0 11px; }
   .section-title-row h2 { font-size: 15px; }
 
