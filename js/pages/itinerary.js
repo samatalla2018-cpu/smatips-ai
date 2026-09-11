@@ -298,41 +298,43 @@ function activityFormHtml(activity) {
   const places = store.list('places');
   return `
     <form id="activity-form" class="flex-col gap-3">
-      ${places.length ? `
-      <div class="field">
-        <label>اختر من أماكنك المحفوظة (اختياري)</label>
-        <select name="placeId" id="activity-place-select">
-          <option value="">بدون ربط — إدخال يدوي</option>
-          ${places.map((p) => `<option value="${p.id}" ${a.placeId === p.id ? 'selected' : ''}>${escapeHtml(p.name)}${p.city ? ' — ' + escapeHtml(p.city) : ''}</option>`).join('')}
-        </select>
-      </div>` : ''}
-      <div class="field">
-        <label>اسم المكان أو النشاط</label>
-        <input type="text" name="title" required placeholder="مثال: زيارة آيا صوفيا" value="${escapeHtml(a.title || '')}" />
-      </div>
-      <div class="field-row">
+      <div class="activity-form-fields">
+        ${places.length ? `
         <div class="field">
-          <label>الوقت (اختياري)</label>
-          <input type="time" name="time" value="${escapeHtml(a.time || '')}" />
-        </div>
-        <div class="field">
-          <label>نوع النشاط</label>
-          <select name="type">
-            ${PLACE_TYPES.map((t) => `<option value="${t.id}" ${a.type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
+          <label>اختر من أماكنك المحفوظة (اختياري)</label>
+          <select name="placeId" id="activity-place-select">
+            <option value="">بدون ربط — إدخال يدوي</option>
+            ${places.map((p) => `<option value="${p.id}" ${a.placeId === p.id ? 'selected' : ''}>${escapeHtml(p.name)}${p.city ? ' — ' + escapeHtml(p.city) : ''}</option>`).join('')}
           </select>
+        </div>` : ''}
+        <div class="field">
+          <label>اسم المكان أو النشاط</label>
+          <input type="text" name="title" required placeholder="مثال: زيارة آيا صوفيا" value="${escapeHtml(a.title || '')}" />
         </div>
-      </div>
-      <div class="field" id="activity-mapsurl-field" ${a.placeId ? 'hidden' : ''}>
-        <label>رابط Google Maps (اختياري)</label>
-        <input type="text" name="mapsUrl" placeholder="الصق رابط الموقع من خرائط جوجل" value="${escapeHtml(a.mapsUrl || '')}" />
-      </div>
-      <div class="field">
-        <label>التكلفة التقديرية (اختياري)</label>
-        <input type="number" name="cost" min="0" value="${escapeHtml(a.cost || '')}" />
-      </div>
-      <div class="field">
-        <label>ملاحظات (اختياري)</label>
-        <textarea name="notes" placeholder="تفاصيل إضافية...">${escapeHtml(a.notes || '')}</textarea>
+        <div class="field-row">
+          <div class="field">
+            <label>الوقت (اختياري)</label>
+            <input type="time" name="time" value="${escapeHtml(a.time || '')}" />
+          </div>
+          <div class="field">
+            <label>نوع النشاط</label>
+            <select name="type">
+              ${PLACE_TYPES.map((t) => `<option value="${t.id}" ${a.type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field" id="activity-mapsurl-field" ${a.placeId ? 'hidden' : ''}>
+          <label>رابط Google Maps (اختياري)</label>
+          <input type="text" name="mapsUrl" placeholder="الصق رابط الموقع من خرائط جوجل" value="${escapeHtml(a.mapsUrl || '')}" />
+        </div>
+        <div class="field">
+          <label>التكلفة التقديرية (اختياري)</label>
+          <input type="number" name="cost" min="0" value="${escapeHtml(a.cost || '')}" />
+        </div>
+        <div class="field">
+          <label>ملاحظات (اختياري)</label>
+          <textarea name="notes" placeholder="تفاصيل إضافية...">${escapeHtml(a.notes || '')}</textarea>
+        </div>
       </div>
       <div class="modal-actions">
         <button type="submit" class="btn btn-primary btn-block">${icon('check', 16)}<span>${activity ? 'حفظ التعديلات' : 'إضافة النشاط'}</span></button>

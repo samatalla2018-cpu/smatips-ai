@@ -1164,6 +1164,24 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
 
+/* -------- نموذج "إضافة/تعديل نشاط" فقط (#activity-form) — تمرير داخلي للحقول مع بقاء زر الحفظ
+   ثابتًا وظاهرًا دائمًا أسفل النافذة على الجوال. محصور بمعرّف الفورم نفسه فقط؛ لا يؤثر على أي
+   نافذة أخرى في الموقع (المهام، الأغراض، الأماكن، الروابط، الخدمات...) التي تستخدم نفس
+   .modal-actions العامة أعلاه بلا أي تغيير. -------- */
+#activity-form .activity-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: min(58vh, 58dvh);
+}
+#activity-form .modal-actions {
+  flex-shrink: 0;
+  padding-bottom: max(0px, env(safe-area-inset-bottom));
+}
+
 /* -------- بطاقات قوائم العناصر (مهام/أغراض/أماكن...) -------- */
 .item-card {
   display: flex; align-items: flex-start; gap: 10px;
