@@ -1195,7 +1195,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   color: #fff; margin-top: 1px; background: var(--surface);
 }
 .item-check.checked { background: var(--primary); border-color: var(--primary); }
-.item-title { font-weight: 700; font-size: 14px; }
+.item-title { font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
 .item-title.done { text-decoration: line-through; color: var(--text-faint); }
 .item-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .item-actions { display: flex; gap: 4px; margin-inline-start: auto; flex-shrink: 0; }
@@ -1556,7 +1556,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .gap-1 { gap: 6px; } .gap-2 { gap: 10px; } .gap-3 { gap: 14px; }
 .mt-1 { margin-top: 6px; } .mt-2 { margin-top: 12px; } .mt-3 { margin-top: 18px; }
 .text-muted { color: var(--text-muted); }
-.text-sm { font-size: 13px; }
+.text-sm { font-size: 13px; overflow-wrap: anywhere; }
 .font-bold { font-weight: 800; }
 .w-full { width: 100%; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
