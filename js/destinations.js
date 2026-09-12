@@ -26,68 +26,80 @@ function normalizeDestKey(str) {
 // قائمة موسّعة تغطي أشهر وجهات المسافر الخليجي تحديدًا (خليجية + أوروبية + آسيوية + إقليمية).
 const DESTINATION_ALIASES = {
   // السعودية
-  'جده': 'jeddah', 'jeddah': 'jeddah', 'جدة': 'jeddah',
+  'جده': 'jeddah', 'jeddah': 'jeddah', 'جدة': 'jeddah', 'jedda': 'jeddah',
   'الرياض': 'riyadh', 'riyadh': 'riyadh',
-  'العلا': 'alula', 'alula': 'alula', 'العُلا': 'alula',
+  'العلا': 'alula', 'alula': 'alula', 'العُلا': 'alula', 'al ula': 'alula',
 
-  // الإمارات
+  // الإمارات — ملاحظة: "الإمارات" (الدولة) لم تعُد تُطابَق مباشرةً مع دبي هنا (كانت تجعل أي مدينة
+  // إماراتية أخرى بلا اسم خاص بها، كالشارقة، تظهر خطأً باسم/صورة دبي) — تُركت للطبقة الإقليمية أدناه.
   'دبي': 'dubai', 'dubai': 'dubai',
   'ابوظبي': 'abudhabi', 'abu dhabi': 'abudhabi', 'أبوظبي': 'abudhabi',
-  'الامارات': 'dubai', 'uae': 'dubai', 'الإمارات': 'dubai',
 
-  // تركيا
+  // عُمان/الأردن — "مسقط" محدَّدة بلا أي لبس فتُضاف هنا مباشرة. أما "عمان" وحدها (بلا تشكيل مضمون
+  // في كتابة المستخدم الفعلية) فقد تعني إما العاصمة الأردنية (عمّان) أو سلطنة عُمان — لا تُدرَج هنا
+  // كي لا نخمّن خطأً؛ الطبقة الديناميكية أدناه تفصل بينهما باستخدام حقل الدولة المرافق (مثال:
+  // "عمان" + "الأردن" → مدينة عمّان تحديدًا)، والإنجليزية "Amman" غير الملبوسة تبقى تطابقًا مباشرًا.
+  'مسقط': 'muscat', 'muscat': 'muscat',
+  'amman': 'amman',
+
+  // تركيا — أُزيلت "تركيا/turkey" كتطابق مباشر مع إسطنبول (كانت تجعل أي مدينة تركية أخرى بلا اسم
+  // خاص بها، مثل كابادوكيا، تظهر خطأً باسم/صورة إسطنبول)، وكذلك "أنطاليا" التي هي مدينة مختلفة
+  // تمامًا عن إسطنبول ولا يصح إظهار صورتها. كلتاهما تُركتا للطبقتين الإقليمية/الديناميكية أدناه.
   'اسطنبول': 'istanbul', 'istanbul': 'istanbul',
   'طرابزون': 'trabzon', 'trabzon': 'trabzon',
-  'انطاليا': 'istanbul', 'antalya': 'istanbul',
-  'تركيا': 'istanbul', 'turkey': 'istanbul',
 
   // فرنسا / بريطانيا
-  'باريس': 'paris', 'paris': 'paris', 'فرنسا': 'paris', 'france': 'paris',
-  'لندن': 'london', 'london': 'london', 'بريطانيا': 'london', 'britain': 'london',
-  'المملكه المتحده': 'london', 'uk': 'london', 'انجلترا': 'london', 'england': 'london',
+  'باريس': 'paris', 'paris': 'paris',
+  'لندن': 'london', 'london': 'london',
 
   // إيطاليا
   'البندقيه': 'venice', 'venice': 'venice',
   'روما': 'rome', 'rome': 'rome',
   'ميلانو': 'milan', 'milan': 'milan', 'ميلان': 'milan',
-  'ايطاليا': 'venice', 'italy': 'venice',
 
   // النمسا وسويسرا
-  'فيينا': 'vienna', 'vienna': 'vienna', 'النمسا': 'vienna', 'austria': 'vienna',
+  'فيينا': 'vienna', 'vienna': 'vienna',
   'زيلامسي': 'zellamsee', 'zell am see': 'zellamsee', 'zellamsee': 'zellamsee',
   'انترلاكن': 'interlaken', 'interlaken': 'interlaken',
   'جنيف': 'geneva', 'geneva': 'geneva',
   'زيورخ': 'zurich', 'zurich': 'zurich', 'زيوريخ': 'zurich',
-  'سويسرا': 'interlaken', 'switzerland': 'interlaken',
 
   // هولندا وإسبانيا
-  'امستردام': 'amsterdam', 'amsterdam': 'amsterdam', 'هولندا': 'amsterdam', 'netherlands': 'amsterdam',
+  'امستردام': 'amsterdam', 'amsterdam': 'amsterdam',
   'برشلونه': 'barcelona', 'barcelona': 'barcelona',
   'مدريد': 'madrid', 'madrid': 'madrid',
-  'اسبانيا': 'barcelona', 'spain': 'barcelona',
 
   // البلقان والقوقاز
   'سراييفو': 'sarajevo', 'sarajevo': 'sarajevo', 'البوسنه': 'sarajevo', 'bosnia': 'sarajevo',
   'باكو': 'baku', 'baku': 'baku', 'اذربيجان': 'baku', 'azerbaijan': 'baku',
   'تبليسي': 'tbilisi', 'tbilisi': 'tbilisi', 'جورجيا': 'tbilisi',
 
-  // اليونان
-  'سانتوريني': 'santorini', 'santorini': 'santorini', 'اليونان': 'santorini', 'greece': 'santorini', 'اثينا': 'santorini', 'athens': 'santorini',
+  // اليونان — أُزيلت "اليونان/greece" (الدولة) وكذلك "أثينا/Athens" من هذا المفتاح: أثينا مدينة
+  // حقيقية مختلفة تمامًا عن سانتوريني ولا يصح إظهار صورتها؛ كلتاهما تُركتا للطبقتين أدناه.
+  'سانتوريني': 'santorini', 'santorini': 'santorini',
 
   // مصر
   'مصر': 'egypt', 'egypt': 'egypt', 'القاهره': 'egypt', 'cairo': 'egypt',
   'الاقصر': 'egypt', 'luxor': 'egypt', 'اسوان': 'egypt', 'aswan': 'egypt', 'الجيزه': 'egypt', 'giza': 'egypt',
   'شرم الشيخ': 'sharm', 'sharm el sheikh': 'sharm', 'sharm': 'sharm', 'شرم': 'sharm',
 
-  // المغرب
-  'مراكش': 'marrakech', 'marrakech': 'marrakech', 'المغرب': 'marrakech', 'morocco': 'marrakech',
+  // المغرب — أُزيلت "المغرب/morocco" (الدولة) من هذا المفتاح لنفس السبب (كانت تجعل طنجة/فاس/الدار
+  // البيضاء بلا اسم خاص بها تظهر خطأً باسم/صورة مراكش) — تُركت للطبقتين الإقليمية/الديناميكية أدناه.
+  'مراكش': 'marrakech', 'marrakech': 'marrakech',
 
   // جنوب/جنوب شرق آسيا
+  // "بانكوك" أُزيلت عمدًا من هذه المجموعة: هي عاصمة/مدينة كبرى وليست وجهة شاطئية مثل بقية القائمة،
+  // فتُترك للطبقة الديناميكية أدناه لتُحضر صورتها الخاصة (معبد/أفق المدينة) بدل صورة شاطئ عامة.
   'المالديف': 'maldives', 'maldives': 'maldives',
-  'تايلاند': 'thailand', 'thailand': 'thailand', 'بوكيت': 'thailand', 'phuket': 'thailand', 'بانكوك': 'thailand', 'bangkok': 'thailand', 'كرابي': 'thailand', 'krabi': 'thailand',
-  'كوالالمبور': 'kualalumpur', 'kuala lumpur': 'kualalumpur', 'ماليزيا': 'kualalumpur', 'malaysia': 'kualalumpur',
+  'تايلاند': 'thailand', 'thailand': 'thailand', 'بوكيت': 'thailand', 'phuket': 'thailand', 'كرابي': 'thailand', 'krabi': 'thailand',
+  'كوالالمبور': 'kualalumpur', 'kuala lumpur': 'kualalumpur',
   'بالي': 'bali', 'bali': 'bali', 'اندونيسيا': 'bali', 'indonesia': 'bali',
   'الهند': 'india', 'india': 'india', 'اجرا': 'india', 'agra': 'india', 'دلهي': 'india', 'delhi': 'india',
+
+  // شرق آسيا وأفريقيا وأمريكا — إضافات مُتحقَّق منها لتغطية أمثلة عالمية صريحة
+  'طوكيو': 'tokyo', 'tokyo': 'tokyo',
+  'زنجبار': 'zanzibar', 'zanzibar': 'zanzibar',
+  'سيشل': 'seychelles', 'سيشيل': 'seychelles', 'seychelles': 'seychelles',
 };
 
 // مفاتيح الوجهات وبيانات كل منها: صورة كبيرة (Hero)، صورة بطاقة (أصغر)، عنوان عربي، ولمسة لون
@@ -128,6 +140,11 @@ const DESTINATION_THEMES = {
   kualalumpur: { label: 'كوالالمبور', mood: 'أبراج شاهقة وسط الغابات الاستوائية', heroImage: 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?q=80&w=480&auto=format&fit=crop', tint: '#2E8C80' },
   bali: { label: 'بالي', mood: 'مياه فيروزية وشواطئ استوائية ساحرة', heroImage: 'https://images.unsplash.com/photo-1573790387438-4da905039392?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1573790387438-4da905039392?q=80&w=480&auto=format&fit=crop', tint: '#2FA79A' },
   india: { label: 'الهند', mood: 'عمارة مغولية آسرة', heroImage: 'https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=480&auto=format&fit=crop', tint: '#C9773E' },
+  muscat: { label: 'مسقط', mood: 'كورنيش عُماني أصيل بين الجبال والبحر', heroImage: 'https://images.unsplash.com/photo-1763377220339-de687c3efad4?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1763377220339-de687c3efad4?q=80&w=480&auto=format&fit=crop', tint: '#2E8C80' },
+  amman: { label: 'عمّان', mood: 'مدينة الجبال السبعة وعراقة رومانية', heroImage: 'https://images.unsplash.com/photo-1604157886233-08985afc49e9?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1604157886233-08985afc49e9?q=80&w=480&auto=format&fit=crop', tint: '#B8763E' },
+  tokyo: { label: 'طوكيو', mood: 'أضواء حديثة وعراقة يابانية', heroImage: 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?q=80&w=480&auto=format&fit=crop', tint: '#4A5A7A' },
+  zanzibar: { label: 'زنجبار', mood: 'شواطئ استوائية وهدوء أفريقي أصيل', heroImage: 'https://images.unsplash.com/photo-1549035092-33b2937b075a?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1549035092-33b2937b075a?q=80&w=480&auto=format&fit=crop', tint: '#2FA79A' },
+  seychelles: { label: 'سيشل', mood: 'صخور غرانيتية ومياه فيروزية ساحرة', heroImage: 'https://images.unsplash.com/photo-1621329724906-1645709cfcc3?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1621329724906-1645709cfcc3?q=80&w=480&auto=format&fit=crop', tint: '#2FA79A' },
 };
 
 // طبقة ثانية: دولة معروفة بلا مدينة محدَّدة ضمن DESTINATION_ALIASES أعلاه → مفتاح منطقة إقليمية.
@@ -147,6 +164,7 @@ const COUNTRY_REGION_MAP = {
 
   'تونس': 'northAfrica', 'tunisia': 'northAfrica',
   'الجزائر': 'northAfrica', 'algeria': 'northAfrica',
+  'المغرب': 'northAfrica', 'morocco': 'northAfrica',
 
   'ارمينيا': 'caucasus', 'armenia': 'caucasus',
 
@@ -155,6 +173,7 @@ const COUNTRY_REGION_MAP = {
   'الفلبين': 'seAsia', 'philippines': 'seAsia',
   'كمبوديا': 'seAsia', 'cambodia': 'seAsia',
   'لاوس': 'seAsia', 'laos': 'seAsia',
+  'ماليزيا': 'seAsia', 'malaysia': 'seAsia',
 
   'المانيا': 'europe', 'germany': 'europe',
   'بلجيكا': 'europe', 'belgium': 'europe',
@@ -166,15 +185,46 @@ const COUNTRY_REGION_MAP = {
   'بولندا': 'europe', 'poland': 'europe',
   'التشيك': 'europe', 'czechia': 'europe', 'czech republic': 'europe',
   'المجر': 'europe', 'hungary': 'europe',
+
+  // دول لها ثيم مدينة مميّزة (أدناه) كانت سابقًا Alias مباشر لمدينة محدَّدة ضمن الطبقة الأولى —
+  // نُقلت إلى هنا (طبقة إقليمية) بعد إصلاح خطأ إظهار مدينة أخرى في نفس الدولة بصورة/اسم خاطئين
+  // (راجع التعليقات أعلى DESTINATION_ALIASES). تحافظ نفس الصورة على تجربة من يكتب اسم الدولة فقط
+  // بلا مدينة محدَّدة تمامًا كما كانت، بينما أي مدينة أخرى تحصل الآن على صورتها الخاصة عبر الطبقة
+  // الديناميكية بدل مدينة أخرى مختلفة تمامًا.
+  'تركيا': 'turkeyGeneric', 'turkey': 'turkeyGeneric',
+  'فرنسا': 'franceGeneric', 'france': 'franceGeneric',
+  'بريطانيا': 'britainGeneric', 'britain': 'britainGeneric', 'المملكه المتحده': 'britainGeneric', 'uk': 'britainGeneric', 'انجلترا': 'britainGeneric', 'england': 'britainGeneric',
+  'ايطاليا': 'italyGeneric', 'italy': 'italyGeneric',
+  'النمسا': 'austriaGeneric', 'austria': 'austriaGeneric',
+  'سويسرا': 'switzerlandGeneric', 'switzerland': 'switzerlandGeneric',
+  'هولندا': 'netherlandsGeneric', 'netherlands': 'netherlandsGeneric',
+  'اسبانيا': 'spainGeneric', 'spain': 'spainGeneric',
+  'اليونان': 'greeceGeneric', 'greece': 'greeceGeneric',
 };
 
+// ملاحظة مهمة (إصلاح خطأ سابق): كانت صور gulf/levant/northAfrica هنا صورًا خاطئة تمامًا لا تمثّل
+// المنطقة إطلاقًا (gulf كانت صورة الكعبة المشرّفة بمكة تحديدًا — غير مناسبة كصورة عامة لدول أخرى
+// كالكويت/قطر/عُمان، وlevant كانت صورة لعبة "ليغو" لسيارة (Batmobile) بلا أي علاقة بالمنطقة، وكانت
+// northAfrica تُعيد استخدام صورة "الهند" نفسها بالخطأ). استُبدلت الثلاث بصور مُتحقَّق منها فعليًا.
 const REGION_THEMES = {
-  gulf: { mood: 'أجواء خليجية عصرية', heroImage: 'https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?q=80&w=480&auto=format&fit=crop', tint: '#2E8C80' },
-  levant: { mood: 'عمارة شرقية أصيلة', heroImage: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?q=80&w=480&auto=format&fit=crop', tint: '#B8763E' },
-  northAfrica: { mood: 'صحراء وتراث عريق', heroImage: 'https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=480&auto=format&fit=crop', tint: '#C9773E' },
+  gulf: { mood: 'أجواء خليجية عصرية', heroImage: 'https://images.unsplash.com/photo-1609229862559-88fc0ac257ad?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1609229862559-88fc0ac257ad?q=80&w=480&auto=format&fit=crop', tint: '#2E8C80' },
+  levant: { mood: 'عمارة شرقية أصيلة', heroImage: 'https://images.unsplash.com/photo-1604157886233-08985afc49e9?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1604157886233-08985afc49e9?q=80&w=480&auto=format&fit=crop', tint: '#B8763E' },
+  northAfrica: { mood: 'صحراء وتراث عريق', heroImage: 'https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?q=80&w=480&auto=format&fit=crop', tint: '#C9773E' },
   caucasus: { mood: 'وديان جبلية وطابع أوروبي شرقي', heroImage: 'https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1565008447742-97f6f38c985c?q=80&w=480&auto=format&fit=crop', tint: '#B8763E' },
   seAsia: { mood: 'طبيعة استوائية خضراء', heroImage: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?q=80&w=480&auto=format&fit=crop', tint: '#2FA79A' },
   europe: { mood: 'عمارة أوروبية كلاسيكية', heroImage: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?q=80&w=480&auto=format&fit=crop', tint: '#4A5A7A' },
+
+  // ثيمات دول (طبقة إقليمية) — نفس صور المدن المُنسَّقة أعلاه تمامًا (بلا أي تغيير في الصورة نفسها؛
+  // فقط انتقلت من "تطابق مؤكَّد" إلى "خلفية إقليمية" حتى لا تُنسَب خطأً لمدينة أخرى مختلفة تمامًا).
+  turkeyGeneric: { mood: 'بين قارتين وحكايا عثمانية', heroImage: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=480&auto=format&fit=crop', tint: '#B8763E' },
+  franceGeneric: { mood: 'مساءات فرنسية دافئة', heroImage: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?q=80&w=480&auto=format&fit=crop', tint: '#8B7CC4' },
+  britainGeneric: { mood: 'عراقة بريطانية أصيلة', heroImage: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=480&auto=format&fit=crop', tint: '#4A5A7A' },
+  italyGeneric: { mood: 'عمارة إيطالية كلاسيكية', heroImage: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?q=80&w=480&auto=format&fit=crop', tint: '#4FA0A6' },
+  austriaGeneric: { mood: 'موسيقى كلاسيكية وعمارة إمبراطورية', heroImage: 'https://images.unsplash.com/photo-1516550893923-42d28e5677af?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1516550893923-42d28e5677af?q=80&w=480&auto=format&fit=crop', tint: '#8B7CC4' },
+  switzerlandGeneric: { mood: 'جبال الألب وهواء نقي', heroImage: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=480&auto=format&fit=crop', tint: '#3E7FBF' },
+  netherlandsGeneric: { mood: 'قنوات هادئة ودراجات في كل مكان', heroImage: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?q=80&w=480&auto=format&fit=crop', tint: '#C99A3E' },
+  spainGeneric: { mood: 'شمس البحر المتوسط وعمارة أصيلة', heroImage: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?q=80&w=480&auto=format&fit=crop', tint: '#C9773E' },
+  greeceGeneric: { mood: 'أبيض وأزرق فوق بحر إيجه', heroImage: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=1200&auto=format&fit=crop', cardImage: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=480&auto=format&fit=crop', tint: '#3E7FBF' },
 };
 
 // وجهة افتراضية أنيقة (بهوية SmaTrips الفيروزية) — ملاذ أخير فقط، عندما لا تُعرف الوجهة إطلاقًا
@@ -226,3 +276,163 @@ function getDestinationTheme(trip) {
 
 window.getDestinationTheme = getDestinationTheme;
 window.DESTINATION_THEMES = DESTINATION_THEMES;
+
+// =================== طبقة رابعة (ديناميكية): توسيع التغطية عالميًا بلا Hardcoding ===================
+// تُستدعى فقط عندما تفشل الطبقة الأولى الدقيقة أعلاه (لا مدينة/دولة معروفة ضمن DESTINATION_ALIASES)
+// — لا تُستدعى إطلاقًا لأي وجهة من الوجهات المُنسَّقة يدويًا، فصورها الحالية لا تتأثر بهذا القسم
+// بأي شكل. تجلب صورة الغلاف (thumbnail) الحقيقية لمقالة ويكيبيديا الخاصة بالمدينة/الدولة عبر
+// Wikipedia API الرسمي والمجاني (بلا مفتاح API، وبلا أي كلفة أو تسجيل) بدل صورة مخزون عامة قد لا
+// تُمثّل المكان إطلاقًا. تعمل بشكل غير متزامن تمامًا (لا تُبطئ عرض الصفحة أو إنشاء الرحلة أبدًا):
+// الصورة الفورية المعروضة تبقى دائمًا الاحتياطية المتزامنة أعلاه (منطقة/محايدة)، ثم تُستبدَل الصورة
+// في مكانها بهدوء إن وُجدت صورة أدق لاحقًا (بنفس أسلوب liveUpdateOnboardingHero/liveUpdateTripDetails
+// الحيّ الموجود مسبقًا في trip.js)، بلا أي Layout Shift (نفس عنصر <img> بنفس أبعاد CSS الثابتة).
+
+const DYNAMIC_DEST_IMG_CACHE_KEY = 'smatrips.destImgCache.v1';
+
+// أنماط ملفات معروفة بأنها ليست صورة مكان حقيقية: أعلام/شعارات النبالة/خرائط/رموز توضيحية/شعارات،
+// بالإضافة إلى Montage/Collage الصريحة (عدة صور مُجمَّعة في شبكة واحدة بحدود بيضاء) — امتداد .svg
+// شبه دائمًا علم أو رمز وليس صورة فوتوغرافية حقيقية للمكان.
+// ملاحظة: صور SVG المصغَّرة عبر Wikimedia تُرسَم كـ PNG لكن الامتداد الأصلي يبقى ظاهرًا في المسار
+// بصيغة ".svg.png" (وليس ".svg" فقط في نهاية الرابط) — لذا نفحص وجود ".svg" في أي موضع بالمسار.
+const BAD_WIKI_IMAGE_PATTERN = /flag_of|coat_of_arms|blank_map|locator|_map[._]|seal_of|emblem_of|\blogo\b|montage|_coll[._]|collage|al_asimah|governorate|\.svg/i;
+
+function loadDynamicDestImageCache() {
+  try { return JSON.parse(localStorage.getItem(DYNAMIC_DEST_IMG_CACHE_KEY)) || {}; } catch { return {}; }
+}
+function saveDynamicDestImageCache(cache) {
+  try { localStorage.setItem(DYNAMIC_DEST_IMG_CACHE_KEY, JSON.stringify(cache)); } catch { /* تخزين ممتلئ/وضع خاص — تجاهل، لا يوقف الميزة */ }
+}
+
+// تقبل فقط صورة تبدو Landscape حقيقية: أبعاد معروفة، ليست علمًا/خريطة/شعارًا/Montage، وليست بورتريه
+// حادًّا (النسبة الأكثر شيوعًا في الصور المُجمَّعة التي لا تحمل اسمًا يفضحها في الملف نفسه).
+function isAcceptableWikiThumb(thumb) {
+  if (!thumb || !thumb.source || !thumb.width || !thumb.height) return false;
+  if (BAD_WIKI_IMAGE_PATTERN.test(thumb.source)) return false;
+  if (thumb.height > thumb.width * 1.35) return false;
+  return true;
+}
+
+async function wikipediaSearchTitle(query, lang) {
+  const api = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=1&format=json&origin=*`;
+  const res = await fetch(api);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data && data.query && data.query.search && data.query.search[0] && data.query.search[0].title) || null;
+}
+
+// prop=pageimages|pageprops عبر action=query (وليس REST summary) تحديدًا لأنه يسمح بطلب مقاس
+// Thumbnail عشوائي (pithumbsize) بلا القيود على "المقاسات المسموحة فقط" في روابط thumb.wikimedia.org
+// المباشرة، ويعيد أيضًا pageprops.disambiguation لاستبعاد صفحات التوضيح (مثل "عمان" بلا سياق دولة).
+async function wikipediaPageImage(title, lang, size) {
+  const api = `https://${lang}.wikipedia.org/w/api.php?action=query&prop=pageimages|pageprops&piprop=thumbnail&pithumbsize=${size}&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+  const res = await fetch(api);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const pages = data && data.query && data.query.pages;
+  const page = pages && Object.values(pages)[0];
+  if (!page) return null;
+  return { thumb: page.thumbnail || null, disambiguation: !!(page.pageprops && page.pageprops.disambiguation) };
+}
+
+async function fetchWikipediaImageForQuery(query, lang) {
+  const title = await wikipediaSearchTitle(query, lang);
+  if (!title) return null;
+  const page = await wikipediaPageImage(title, lang, 1200);
+  if (!page || page.disambiguation) return null;
+  if (!isAcceptableWikiThumb(page.thumb)) return null;
+  return page.thumb.source;
+}
+
+// ترتيب المحاولات: مدينة+دولة معًا أولًا (الأدق لفكّ أي لبس، مثل "عمان" + "الأردن" ← مدينة عمّان
+// تحديدًا، أو "طرابلس" + "لبنان" بدل طرابلس ليبيا)، ثم المدينة وحدها، ثم الدولة وحدها إن لم تُذكر
+// مدينة إطلاقًا — بلغة المستخدم أولًا (عربي إن كتب عربيًا) ثم الإنجليزية كمحاولة أخيرة فقط.
+async function resolveDynamicDestinationImage(cityRaw, countryRaw) {
+  const city = (cityRaw || '').trim();
+  const country = (countryRaw || '').trim();
+  if (!city && !country) return null;
+
+  const cacheKey = normalizeDestKey(`${city}|${country}`);
+  const cache = loadDynamicDestImageCache();
+  if (Object.prototype.hasOwnProperty.call(cache, cacheKey)) return cache[cacheKey];
+
+  const hasArabic = /[؀-ۿ]/.test(city || country);
+  const langs = hasArabic ? ['ar', 'en'] : ['en'];
+  const sameCityCountry = city && country && normalizeDestKey(city) === normalizeDestKey(country);
+
+  // بناء قائمة محاولات مناسبة لكل لغة على حدة (وليست نصًّا واحدًا مشتركًا) حتى لا نخلط عربيًا
+  // بإنجليزي داخل الاستعلام نفسه — استعلام مُختلَط اللغة (نص عربي + كلمة إنجليزية) أثبت أنه غير
+  // مستقر في ترتيب نتائج بحث ويكيبيديا (يُطابق أحيانًا صفحة مختلفة تمامًا بين محاولتين متطابقتين)،
+  // لذا يبقى كل استعلام أحاديّ اللغة تمامًا. مدينة تحمل اسم دولتها نفسه (الكويت، سنغافورة...) —
+  // المقالة الافتراضية لهذا الاسم في ويكيبيديا غالبًا صفحة الدولة (وصورتها الرئيسية غالبًا العلم،
+  // تُرفض أدناه) وليست صفحة المدينة تحديدًا؛ نطلب صراحةً نسخة "العاصمة" أولًا بالعربية لتفادي هذا
+  // الالتباس (بالإنجليزية لا حاجة لذلك: "Kuwait City"/"Singapore City" نص إنجليزي صرف أصلًا).
+  function queriesForLang(lang) {
+    const list = [];
+    if (sameCityCountry && lang === 'ar') list.push(`${city} العاصمة`);
+    if (sameCityCountry && lang === 'en' && /^[\x00-\x7F]*$/.test(city)) list.push(`${city} City`);
+    if (city && country && !sameCityCountry) list.push(`${city}, ${country}`);
+    if (city) list.push(city);
+    if (!city && country) list.push(country);
+    return list;
+  }
+
+  let found = null;
+  for (const lang of langs) {
+    for (const q of queriesForLang(lang)) {
+      try {
+        found = await fetchWikipediaImageForQuery(q, lang);
+      } catch {
+        found = null; // فشل شبكة — جرّب المحاولة التالية بدل كسر الميزة بالكامل
+      }
+      if (found) break;
+    }
+    if (found) break;
+  }
+
+  cache[cacheKey] = found || null;
+  saveDynamicDestImageCache(cache);
+  return found;
+}
+
+// تُحدِّث كل عناصر <img> المعروضة حاليًا والمخصَّصة لصورة الوجهة (معلَّمة بـ data-dest-role) —
+// hero (البانرات الكبيرة) وcard (بطاقات أصغر) — بلا أي Layout Shift لأن الأبعاد ثابتة عبر CSS
+// (object-fit: cover) بغضّ النظر عن نسبة أبعاد الصورة الجديدة نفسها.
+function applyDynamicDestinationImage(url) {
+  if (!url || typeof document === 'undefined') return;
+  document.querySelectorAll('[data-dest-role="hero"], [data-dest-role="card"]').forEach((img) => {
+    if (img.src !== url) img.src = url;
+  });
+}
+
+let _destImgUpgradeTimer = null;
+// رقم جيل مُتزايد: كل نداء جدولة جديد يحصل على رقم أحدث. عند انتهاء الانتظار الشبكي، تُطبَّق
+// النتيجة فقط إن كانت لا تزال الأحدث — هذا يحل مشكلة الكتابة السريعة (تغيير الوجهة أثناء انتظار
+// نتيجة بحث سابقة) دون الاعتماد على store.getTrip() الذي لا يتحدّث إلا بعد حفظ فعلي للنموذج، بينما
+// هذه الميزة تعمل حتى أثناء الكتابة الحيّة قبل أي حفظ (raceCondition-safe بلا حاجة لمقارنة تخزين).
+let _destImgUpgradeGeneration = 0;
+// يُستدعى من صفحات العرض (trip.js/trips.js) بعد كل عرض/تحديث حيّ لبيانات الرحلة. مُهمَّل (debounced)
+// حتى لا يُطلق طلب شبكة عند كل ضغطة مفتاح أثناء الكتابة — ينتظر استقرار الكتابة أولًا.
+function scheduleDestinationImageUpgrade(trip) {
+  if (typeof window === 'undefined') return;
+  if (_destImgUpgradeTimer) clearTimeout(_destImgUpgradeTimer);
+  const snapshot = { city: (trip && trip.city) || '', country: (trip && trip.country) || '' };
+  const myGeneration = ++_destImgUpgradeGeneration;
+  _destImgUpgradeTimer = setTimeout(() => { runDestinationImageUpgrade(snapshot, myGeneration); }, 600);
+}
+
+async function runDestinationImageUpgrade(trip, generation) {
+  if (!trip || (!trip.city && !trip.country)) return;
+  // تطابق مؤكَّد بالفعل (الطبقة الأولى) — لا حاجة لأي بحث ديناميكي، ولا نلمس صورته إطلاقًا
+  if (getDestinationTheme(trip).key) return;
+
+  const url = await resolveDynamicDestinationImage(trip.city, trip.country);
+  if (!url) return;
+
+  // إن حدث نداء جدولة جديد أثناء انتظار الشبكة (كتابة لاحقة غيّرت الوجهة)، هذا الجيل لم يعد
+  // الأحدث — تجاهل النتيجة ولا تستبدل الصورة المعروضة حاليًا بصورة قد لا تخص الوجهة الحالية فعليًا
+  if (generation !== _destImgUpgradeGeneration) return;
+
+  applyDynamicDestinationImage(url);
+}
+
+window.scheduleDestinationImageUpgrade = scheduleDestinationImageUpgrade;

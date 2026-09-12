@@ -309,7 +309,7 @@ function tripOnboardingBannerHtml(trip) {
   const title = destName ? `رحلتك إلى ${destName} تبدأ من هنا` : 'دوّن تفاصيل رحلتك وخلّها تصير حقيقة';
   return `
     <div class="hero-banner${theme.isFallback ? ' is-fallback' : ''}" id="trip-onboarding-hero" style="min-height:170px;margin-bottom:18px;" data-animate>
-      <img class="hero-banner-img" src="${theme.heroImage}" alt="" loading="lazy" />
+      <img class="hero-banner-img" data-dest-role="hero" src="${theme.heroImage}" alt="" loading="lazy" />
       <div class="hero-banner-scrim"></div>
       <div class="hero-banner-content">
         <span class="hero-eyebrow">${icon('passport', 15)}<span>${escapeHtml(theme.key || theme.region ? theme.mood : 'الخطوة الأولى')}</span></span>
@@ -334,6 +334,7 @@ function liveUpdateOnboardingHero(partialTrip) {
   el.classList.toggle('is-fallback', !!theme.isFallback);
   if (eyebrowText) eyebrowText.textContent = theme.key || theme.region ? theme.mood : 'الخطوة الأولى';
   if (h2) h2.textContent = destName ? `رحلتك إلى ${destName} تبدأ من هنا` : 'دوّن تفاصيل رحلتك وخلّها تصير حقيقة';
+  if (typeof scheduleDestinationImageUpgrade === 'function') scheduleDestinationImageUpgrade(trip);
 }
 
 // ---------- Hero + شريط إحصاءات "تفاصيل الرحلة" (بعد وجود trip_id) ----------
@@ -344,7 +345,7 @@ function tripDetailsHeroHtml(trip) {
   const title = trip.title || (destName ? `رحلتي إلى ${destName}` : 'رحلتي القادمة');
   return `
     <div class="hero-banner${theme.isFallback ? ' is-fallback' : ''}" id="trip-details-hero" style="margin-bottom:0;" data-animate>
-      <img class="hero-banner-img" src="${theme.heroImage}" alt="" loading="eager" />
+      <img class="hero-banner-img" data-dest-role="hero" src="${theme.heroImage}" alt="" loading="eager" />
       <div class="hero-banner-scrim"></div>
       <div class="hero-banner-content">
         <span class="hero-eyebrow">${icon('sparkle', 15)}<span>${escapeHtml(theme.key || theme.region ? theme.mood : 'جاهز لمغامرتك القادمة؟')}</span></span>
@@ -390,6 +391,7 @@ function liveUpdateTripDetails(partialTrip) {
 
   const bar = qs('#trip-stat-bar');
   if (bar) bar.outerHTML = tripStatBarHtml(trip);
+  if (typeof scheduleDestinationImageUpgrade === 'function') scheduleDestinationImageUpgrade(trip);
 }
 
 // ---------- نموذج بيانات الرحلة (مشترك بين حالتَي ما قبل/بعد الإنشاء) ----------
@@ -572,6 +574,7 @@ function renderGuestPreview(container, trip) {
       ${guestCompleteCtaHtml()}
     </div>
   `;
+  if (typeof scheduleDestinationImageUpgrade === 'function') scheduleDestinationImageUpgrade(trip);
   if (window.initAnimate) initAnimate(container);
   loadTripMiniWeather(trip);
 
@@ -664,6 +667,7 @@ function renderTrip(container) {
       ${tripFormHtml(trip)}
       ${tripStatusCardHtml(trip)}
     `;
+    if (typeof scheduleDestinationImageUpgrade === 'function') scheduleDestinationImageUpgrade(trip);
 
     const { saveTripFormData } = wireTripForm(container);
 
@@ -701,6 +705,7 @@ function renderTrip(container) {
       ${tripFormHtml(trip)}
     </details>
   `;
+  if (typeof scheduleDestinationImageUpgrade === 'function') scheduleDestinationImageUpgrade(trip);
 
   wireTripForm(container);
   refreshTripStatusCard();

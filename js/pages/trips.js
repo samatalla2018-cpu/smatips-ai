@@ -22,7 +22,7 @@ function tripCardHtml(t, i) {
   const href = isCurrent ? '#/trip' : `#/pay?trip=${encodeURIComponent(t.id)}`;
   return `
     <a class="trip-card mt-2" data-id="${t.id}" href="${href}" data-animate style="transition-delay:${Math.min(i * 50, 200)}ms">
-      <img class="trip-card-img" src="${theme.cardImage}" alt="" loading="lazy" />
+      <img class="trip-card-img"${isCurrent ? ' data-dest-role="card"' : ''} src="${theme.cardImage}" alt="" loading="lazy" />
       <div class="trip-card-scrim"></div>
       <span class="trip-card-status${t.unlocked ? ' is-paid' : ''}">${t.unlocked ? 'مفتوحة بالكامل' : 'نسخة تجريبية'}</span>
       <div class="trip-card-actions">
@@ -50,6 +50,7 @@ async function loadTripsList(listEl) {
         desc: 'اضغط "إنشاء ملف رحلة جديد" لحفظ نسخة قابلة للتنزيل من رحلتك الحالية.',
       });
       if (window.initAnimate) initAnimate(listEl);
+      if (typeof scheduleDestinationImageUpgrade === 'function') scheduleDestinationImageUpgrade(store.getTrip());
     };
     renderList();
 
